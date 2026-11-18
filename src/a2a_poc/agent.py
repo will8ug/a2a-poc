@@ -32,6 +32,10 @@ class ChatAgent:
             ],
         )
         async for chunk in stream:
+            if not chunk.choices:
+                # Some OpenAI-compatible endpoints end the stream with
+                # usage-only chunks that carry no choices; skip them.
+                continue
             content = chunk.choices[0].delta.content
             if content:
                 yield content

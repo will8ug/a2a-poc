@@ -7,6 +7,10 @@ def _chunk(text: str):
     return SimpleNamespace(choices=[SimpleNamespace(delta=SimpleNamespace(content=text))])
 
 
+def _empty_choices_chunk():
+    return SimpleNamespace(choices=[])
+
+
 class FakeCompletions:
     def __init__(self, chunks):
         self._chunks = chunks
@@ -29,6 +33,15 @@ class FakeClient:
 
 async def test_stream_reply_yields_deltas_in_order():
     agent = ChatAgent(client=FakeClient([_chunk("Hel"), _chunk("lo")]), model="test-model")
+    deltas = [d async for d in agent.stream_reply("hi")]
+    assert deltas == ["Hel", "lo"]
+
+
+async def test_stream_reply_skips_chunks_with_no_choices():
+    agent = ChatAgent(
+        client=FakeClient([_chunk("Hel"), _empty_choices_chunk(), _chunk("lo")]),
+        model="test-model",
+    )
     deltas = [d async for d in agent.stream_reply("hi")]
     assert deltas == ["Hel", "lo"]
 

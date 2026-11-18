@@ -1,3 +1,4 @@
+import logging
 from types import SimpleNamespace
 
 from a2a.helpers import new_text_message
@@ -66,3 +67,26 @@ async def test_llm_failure_marks_task_failed():
     await executor.execute(_context("hi"), queue)
     assert _final_state(queue.events) == TaskState.TASK_STATE_FAILED
     assert _artifact_text(queue.events) == ""
+
+
+async def test_llm_failure_flushes_held_delta_before_failed():
+    queue = FakeEventQueue()
+    executor = ChatAgentExecutor(
+        agent=FakeAgent(chunks=["partial-"], error=RuntimeError("boom"))
+    )
+    await executor.execute(_context("hi"), queue)
+    assert _final_state(queue.events) == TaskState.TASK_STATE_FAILED
+    assert _artifact_text(queue.events) == "partial-"
+
+
+async def test_llm_failure_logs_exception_server_side(caplog):
+    queue = FakeEventQueue()
+    executor = ChatAgentExecutor(agent=FakeAgent(error=RuntimeError("boom")))
+    with caplog.at_level(logging.ERROR, logger="a2a_poc.executor"):
+        await executor.execute(_context("hi"), queue)
+    assert any(
+        r.name == "a2a_poc.executor"
+        and r.levelno == logging.ERROR
+        and "LLM call failed" in r.getMessage()
+        for r in caplog.records
+    )
