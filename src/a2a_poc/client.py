@@ -4,41 +4,56 @@ import argparse
 import asyncio
 import sys
 
+from collections.abc import Awaitable, Callable
+
 import httpx
 
 from a2a.client import A2ACardResolver, A2AClientError, Client, ClientConfig, create_client
 from a2a.helpers import new_text_message
-from a2a.types import Role, SendMessageRequest, TaskState
+from a2a.types import AgentCard, Role, SendMessageRequest, TaskState
 
 DEFAULT_BASE_URL = "http://127.0.0.1:9999"
+
+ClientFactory = Callable[[AgentCard], Awaitable[Client]]
 
 
 async def run(
     base_url: str,
     user_text: str,
     httpx_client: httpx.AsyncClient | None = None,
+    client_factory: ClientFactory | None = None,
 ) -> None:
     """Send ``user_text`` to the A2A agent at ``base_url`` and stream the reply.
 
     Resolves the agent card, then streams response events to stdout: artifact
     text is printed as it arrives, task-state transitions get their own line,
-    and a final state line closes the output. Creates and closes an HTTP
-    client only when ``httpx_client`` is not supplied.
+    status messages (e.g. the failure reason on a FAILED task) print after
+    their state line, and a final state line closes the output. Exits with
+    code 1 when the task ends in FAILED, and with code 1 and a stderr message
+    when the agent cannot be reached. Creates and closes an HTTP client only
+    when ``httpx_client`` is not supplied. ``client_factory`` overrides how
+    the A2A client is built from the resolved card (a seam for tests that
+    script the event stream).
     """
     owns_client = httpx_client is None
     http_client = httpx_client if httpx_client is not None else httpx.AsyncClient()
     try:
         resolver = A2ACardResolver(httpx_client=http_client, base_url=base_url)
         agent_card = await resolver.get_agent_card()
-        client = await create_client(
-            agent=agent_card,
-            client_config=ClientConfig(streaming=True, httpx_client=http_client),
-        )
+        if client_factory is None:
+            client = await create_client(
+                agent=agent_card,
+                client_config=ClientConfig(streaming=True, httpx_client=http_client),
+            )
+        else:
+            client = await client_factory(agent_card)
         try:
-            await _stream_reply(client, user_text)
+            final_state = await _stream_reply(client, user_text)
         finally:
             await client.close()
-    except (httpx.HTTPError, A2AClientError) as exc:
+        if final_state == TaskState.TASK_STATE_FAILED:
+            raise SystemExit(1)
+    except (httpx.HTTPError, httpx.InvalidURL, A2AClientError) as exc:
         print(
             f"error: cannot reach A2A agent at {base_url} ({exc})",
             file=sys.stderr,
@@ -49,8 +64,13 @@ async def run(
             await http_client.aclose()
 
 
-async def _stream_reply(client: Client, user_text: str) -> None:
-    """Consume the streamed response, printing artifact text and task states."""
+async def _stream_reply(client: Client, user_text: str) -> int | None:
+    """Consume the streamed response, printing artifact text and task states.
+
+    Status messages carried by a status update (e.g. the failure reason on
+    FAILED) print after the state line. Returns the final observed task
+    state, or ``None`` if no state was observed.
+    """
     request = SendMessageRequest(
         message=new_text_message(user_text, role=Role.ROLE_USER)
     )
@@ -63,17 +83,23 @@ async def _stream_reply(client: Client, user_text: str) -> None:
                     print(part.text, end="", flush=True)
                     text_on_line = True
         elif event.HasField("status_update"):
-            last_state = event.status_update.status.state
+            status = event.status_update.status
+            last_state = status.state
             if text_on_line:
                 print()
                 text_on_line = False
             print(TaskState.Name(last_state))
+            if status.HasField("message"):
+                for part in status.message.parts:
+                    if part.text:
+                        print(part.text)
         elif event.HasField("task"):
             last_state = event.task.status.state
     if text_on_line:
         print()
     if last_state is not None:
         print(f"final state: {TaskState.Name(last_state)}")
+    return last_state
 
 
 def main(argv: list[str] | None = None) -> None:
