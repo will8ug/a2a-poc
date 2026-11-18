@@ -14,10 +14,17 @@ wheels/
 # IDE
 .idea/
 .vscode/
+.claude/
 
 # OS
 .DS_Store
 Thumbs.db
+
+# AI
+.agents/
+.superpowers/
+.worktrees/
+.scratch/
 
 # Local temp
 /prompts.txt
