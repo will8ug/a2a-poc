@@ -25,6 +25,19 @@ Use `--base-url` to point the client at a server on a different address (default
 uv run a2a-poc-client --base-url http://127.0.0.1:8080 "Say hello."
 ```
 
+## Run the UI
+
+In another terminal, start the UI and open the URL it prints (default:
+<http://localhost:8501>):
+
+```sh
+uv run a2a-poc-ui
+```
+
+The chat keeps its history in the browser session. To talk to an agent
+running somewhere else, set **Agent base URL** in the sidebar (default:
+`http://127.0.0.1:9999`).
+
 ## Verify without an LLM key
 
 Run the test suite (no network or key needed):

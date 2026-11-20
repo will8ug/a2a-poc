@@ -120,7 +120,9 @@ async def test_core_failed_task_ends_without_systemexit_and_prints_nothing(capsy
     assert received[-1] == Status(
         state=TaskState.TASK_STATE_FAILED, message="LLM call failed: boom"
     )
-    assert capsys.readouterr().out == ""
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert captured.err == ""
 
 
 async def test_core_propagates_connection_errors():

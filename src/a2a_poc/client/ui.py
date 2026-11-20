@@ -85,5 +85,12 @@ def main() -> None:
     """Run the Streamlit app on this script (console entry ``a2a-poc-ui``)."""
     from streamlit.web import cli as stcli
 
-    sys.argv = ["streamlit", "run", str(Path(__file__).resolve()), *sys.argv[1:]]
+    sys.argv = [
+        "streamlit",
+        "run",
+        str(Path(__file__).resolve()),
+        "--server.address",
+        "127.0.0.1",
+        *sys.argv[1:],
+    ]
     sys.exit(stcli.main())
