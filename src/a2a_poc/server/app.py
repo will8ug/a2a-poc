@@ -12,10 +12,10 @@ from a2a.server.routes import (
 from a2a.server.tasks import InMemoryTaskStore
 from a2a.utils import AGENT_CARD_WELL_KNOWN_PATH, DEFAULT_RPC_URL
 
-from a2a_poc.agent import build_chat_agent
-from a2a_poc.card import build_agent_card
-from a2a_poc.config import Config, load_config
-from a2a_poc.executor import ChatAgentExecutor
+from a2a_poc.server.agent import build_chat_agent
+from a2a_poc.server.card import build_agent_card
+from a2a_poc.server.config import Config, load_config
+from a2a_poc.server.executor import ChatAgentExecutor
 
 HOST = "127.0.0.1"
 PORT = 9999

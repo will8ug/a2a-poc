@@ -1,7 +1,7 @@
 from fastapi.testclient import TestClient
 
-from a2a_poc.config import Config
-from a2a_poc.server import create_app
+from a2a_poc.server.config import Config
+from a2a_poc.server.app import create_app
 
 
 def _app():

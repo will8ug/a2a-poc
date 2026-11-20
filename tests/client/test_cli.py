@@ -14,8 +14,8 @@ from a2a.types import (
     TaskStatusUpdateEvent,
 )
 
-from a2a_poc.card import build_agent_card
-from a2a_poc.client import main, run
+from a2a_poc.server.card import build_agent_card
+from a2a_poc.client.cli import main, run
 
 
 async def test_client_dead_server_friendly_error(capsys):

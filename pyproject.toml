@@ -11,8 +11,8 @@ dependencies = [
 ]
 
 [project.scripts]
-a2a-poc-server = "a2a_poc.server:main"
-a2a-poc-client = "a2a_poc.client:main"
+a2a-poc-server = "a2a_poc.server.app:main"
+a2a-poc-client = "a2a_poc.client.cli:main"
 
 [dependency-groups]
 dev = [

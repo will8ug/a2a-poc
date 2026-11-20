@@ -4,7 +4,7 @@ from collections.abc import AsyncIterator
 
 from openai import AsyncOpenAI
 
-from a2a_poc.config import Config
+from a2a_poc.server.config import Config
 
 SYSTEM_PROMPT = "You are a helpful AI assistant. Answer questions concisely."
 
