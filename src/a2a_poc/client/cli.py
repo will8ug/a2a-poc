@@ -4,17 +4,18 @@ import argparse
 import asyncio
 import sys
 
-from collections.abc import Awaitable, Callable
-
 import httpx
 
-from a2a.client import A2ACardResolver, A2AClientError, Client, ClientConfig, create_client
-from a2a.helpers import new_text_message
-from a2a.types import AgentCard, Role, SendMessageRequest, TaskState
+from a2a.client import A2AClientError
+from a2a.types import TaskState
 
-DEFAULT_BASE_URL = "http://127.0.0.1:9999"
-
-ClientFactory = Callable[[AgentCard], Awaitable[Client]]
+from a2a_poc.client.core import (
+    DEFAULT_BASE_URL,
+    ClientFactory,
+    Delta,
+    Status,
+    stream_reply,
+)
 
 
 async def run(
@@ -35,71 +36,35 @@ async def run(
     the A2A client is built from the resolved card (a seam for tests that
     script the event stream).
     """
-    owns_client = httpx_client is None
-    http_client = httpx_client if httpx_client is not None else httpx.AsyncClient()
+    last_state: int | None = None
+    text_on_line = False
     try:
-        resolver = A2ACardResolver(httpx_client=http_client, base_url=base_url)
-        agent_card = await resolver.get_agent_card()
-        if client_factory is None:
-            client = await create_client(
-                agent=agent_card,
-                client_config=ClientConfig(streaming=True, httpx_client=http_client),
-            )
-        else:
-            client = await client_factory(agent_card)
-        try:
-            final_state = await _stream_reply(client, user_text)
-        finally:
-            await client.close()
-        if final_state == TaskState.TASK_STATE_FAILED:
-            raise SystemExit(1)
+        async for event in stream_reply(
+            base_url, user_text, httpx_client, client_factory
+        ):
+            if isinstance(event, Delta):
+                print(event.text, end="", flush=True)
+                text_on_line = True
+            elif isinstance(event, Status):
+                last_state = event.state
+                if text_on_line:
+                    print()
+                    text_on_line = False
+                print(TaskState.Name(event.state))
+                if event.message:
+                    print(event.message)
     except (httpx.HTTPError, httpx.InvalidURL, A2AClientError) as exc:
         print(
             f"error: cannot reach A2A agent at {base_url} ({exc})",
             file=sys.stderr,
         )
         raise SystemExit(1) from exc
-    finally:
-        if owns_client:
-            await http_client.aclose()
-
-
-async def _stream_reply(client: Client, user_text: str) -> int | None:
-    """Consume the streamed response, printing artifact text and task states.
-
-    Status messages carried by a status update (e.g. the failure reason on
-    FAILED) print after the state line. Returns the final observed task
-    state, or ``None`` if no state was observed.
-    """
-    request = SendMessageRequest(
-        message=new_text_message(user_text, role=Role.ROLE_USER)
-    )
-    last_state: int | None = None
-    text_on_line = False
-    async for event in client.send_message(request):
-        if event.HasField("artifact_update"):
-            for part in event.artifact_update.artifact.parts:
-                if part.text:
-                    print(part.text, end="", flush=True)
-                    text_on_line = True
-        elif event.HasField("status_update"):
-            status = event.status_update.status
-            last_state = status.state
-            if text_on_line:
-                print()
-                text_on_line = False
-            print(TaskState.Name(last_state))
-            if status.HasField("message"):
-                for part in status.message.parts:
-                    if part.text:
-                        print(part.text)
-        elif event.HasField("task"):
-            last_state = event.task.status.state
     if text_on_line:
         print()
     if last_state is not None:
         print(f"final state: {TaskState.Name(last_state)}")
-    return last_state
+    if last_state == TaskState.TASK_STATE_FAILED:
+        raise SystemExit(1)
 
 
 def main(argv: list[str] | None = None) -> None:
