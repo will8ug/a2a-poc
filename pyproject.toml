@@ -9,12 +9,14 @@ dependencies = [
     "openai>=1.0",
     "python-dotenv>=1.0",
     "streamlit>=1.58",
+    "tavily-python>=0.8",
 ]
 
 [project.scripts]
 a2a-poc-server = "a2a_poc.server.app:main"
 a2a-poc-client = "a2a_poc.client.cli:main"
 a2a-poc-ui = "a2a_poc.client.ui:main"
+a2a-poc-search-agent = "a2a_poc.search.app:main"
 
 [dependency-groups]
 dev = [
@@ -30,3 +32,6 @@ build-backend = "uv_build"
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]
+# Test files repeat basenames across tests/server and tests/search (e.g.
+# test_config.py); importlib mode imports each by path so they don't collide.
+addopts = "--import-mode=importlib"
