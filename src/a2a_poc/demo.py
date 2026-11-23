@@ -94,15 +94,21 @@ async def _supervise() -> int:
     loop = asyncio.get_running_loop()
     for sig in (signal.SIGINT, signal.SIGTERM):
         loop.add_signal_handler(sig, stop.set)
-    procs = {name: await _spawn(name, module) for name, module in CHILDREN}
-    print("[demo] all children started; Ctrl-C to stop", flush=True)
-    streams = {
-        name: asyncio.create_task(_stream(name, proc), name=f"stream-{name}")
-        for name, proc in procs.items()
-    }
     stop_task = asyncio.create_task(stop.wait(), name="stop")
-    name_by_task = {task: name for name, task in streams.items()}
+    # Allocate the state the reaping finally needs before the try and fill
+    # it inside: a spawn failure mid-boot still lands in that finally,
+    # which terminates and waits for the children spawned so far.
+    procs: dict[str, asyncio.subprocess.Process] = {}
+    streams: dict[str, asyncio.Task[int]] = {}
     try:
+        for name, module in CHILDREN:
+            procs[name] = await _spawn(name, module)
+        print("[demo] all children started; Ctrl-C to stop", flush=True)
+        for name, proc in procs.items():
+            streams[name] = asyncio.create_task(
+                _stream(name, proc), name=f"stream-{name}"
+            )
+        name_by_task = {task: name for name, task in streams.items()}
         done, _ = await asyncio.wait(
             [stop_task, *streams.values()],
             return_when=asyncio.FIRST_COMPLETED,
