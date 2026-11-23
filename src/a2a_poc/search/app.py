@@ -38,3 +38,7 @@ def main() -> None:
     searcher = build_tavily_searcher(load_tavily_config())
     host, port = resolve_bind(PORT)
     uvicorn.run(create_search_app(searcher, port=port), host=host, port=port)
+
+
+if __name__ == "__main__":
+    main()

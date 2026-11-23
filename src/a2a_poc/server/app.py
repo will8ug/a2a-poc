@@ -37,3 +37,7 @@ def main() -> None:
     """Run the server (console entry point ``a2a-poc-server``)."""
     host, port = resolve_bind(PORT)
     uvicorn.run(create_app(load_config(), port=port), host=host, port=port)
+
+
+if __name__ == "__main__":
+    main()

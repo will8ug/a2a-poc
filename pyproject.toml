@@ -18,6 +18,7 @@ a2a-poc-client = "a2a_poc.client.cli:main"
 a2a-poc-ui = "a2a_poc.client.ui:main"
 a2a-poc-search-agent = "a2a_poc.search.app:main"
 a2a-poc-host = "a2a_poc.host.app:main"
+a2a-poc-demo = "a2a_poc.demo:main"
 
 [dependency-groups]
 dev = [
