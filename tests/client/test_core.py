@@ -9,6 +9,7 @@ from a2a.types import (
     Artifact,
     Part,
     StreamResponse,
+    Task,
     TaskArtifactUpdateEvent,
     TaskState,
     TaskStatus,
@@ -138,3 +139,81 @@ async def test_core_propagates_connection_errors():
             httpx_client=httpx.AsyncClient(transport=transport),
         ):
             pass
+
+
+def _task_response(state, artifact_texts=(), message=None):
+    task = Task(
+        id="t1",
+        context_id="c1",
+        status=(
+            TaskStatus(state=state, message=message)
+            if message is not None
+            else TaskStatus(state=state)
+        ),
+    )
+    for i, text in enumerate(artifact_texts):
+        task.artifacts.append(
+            Artifact(
+                artifact_id=f"a{i}", name="search_results", parts=[Part(text=text)]
+            )
+        )
+    return StreamResponse(task=task)
+
+
+async def _collect(events):
+    async def factory(card):
+        return ScriptedClient(events)
+
+    received = []
+    async for event in stream_reply(
+        "http://127.0.0.1:9999",
+        "hi",
+        httpx_client=httpx.AsyncClient(transport=_card_transport()),
+        client_factory=factory,
+    ):
+        received.append(event)
+    return received
+
+
+async def test_core_translates_final_task_from_non_streaming_agent():
+    events = [
+        _task_response(
+            TaskState.TASK_STATE_COMPLETED,
+            artifact_texts=["A2A is an agent-to-agent protocol."],
+        )
+    ]
+
+    assert await _collect(events) == [
+        Delta(text="A2A is an agent-to-agent protocol."),
+        Status(state=TaskState.TASK_STATE_COMPLETED, message=None),
+    ]
+
+
+async def test_core_translates_failed_task_with_reason():
+    events = [
+        _task_response(
+            TaskState.TASK_STATE_FAILED,
+            message=new_text_message("Search failed: boom"),
+        )
+    ]
+
+    assert await _collect(events) == [
+        Status(state=TaskState.TASK_STATE_FAILED, message="Search failed: boom"),
+    ]
+
+
+async def test_core_ignores_non_terminal_task_event_in_stream():
+    # A streaming response's first event is the initial task (SUBMITTED);
+    # it must not surface as an extra leading Status.
+    events = [
+        _task_response(TaskState.TASK_STATE_SUBMITTED),
+        _status_update(TaskState.TASK_STATE_WORKING),
+        _artifact_update("Hel"),
+        _status_update(TaskState.TASK_STATE_COMPLETED),
+    ]
+
+    assert await _collect(events) == [
+        Status(state=TaskState.TASK_STATE_WORKING, message=None),
+        Delta(text="Hel"),
+        Status(state=TaskState.TASK_STATE_COMPLETED, message=None),
+    ]

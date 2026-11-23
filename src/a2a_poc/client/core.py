@@ -12,11 +12,23 @@ import httpx
 
 from a2a.client import A2ACardResolver, Client, ClientConfig, create_client
 from a2a.helpers import new_text_message
-from a2a.types import AgentCard, Role, SendMessageRequest
+from a2a.types import AgentCard, Role, SendMessageRequest, TaskState
 
 DEFAULT_BASE_URL = "http://127.0.0.1:9999"
 
 ClientFactory = Callable[[AgentCard], Awaitable[Client]]
+
+# Task states that end a task's lifecycle. Non-streaming agents answer
+# message/send with one final task in one of these states; streaming
+# agents send the initial task (SUBMITTED) as the first stream event.
+_TERMINAL_TASK_STATES = frozenset(
+    {
+        TaskState.TASK_STATE_COMPLETED,
+        TaskState.TASK_STATE_FAILED,
+        TaskState.TASK_STATE_CANCELED,
+        TaskState.TASK_STATE_REJECTED,
+    }
+)
 
 
 @dataclass(frozen=True)
@@ -48,12 +60,15 @@ async def stream_reply(
 
     Resolves the agent card at ``base_url``, sends the message, and yields
     ``Delta`` for each streamed artifact text chunk and ``Status`` for each
-    task-state transition, in arrival order. Transport and protocol errors
-    propagate to the caller. Creates and closes an HTTP client only when
-    ``httpx_client`` is not supplied; the A2A client is always closed (it
-    never closes a shared ``httpx_client``). ``client_factory`` overrides
-    how the A2A client is built from the resolved card (a seam for tests
-    that script the event stream).
+    task-state transition, in arrival order. Non-streaming agents reply
+    with one final task (artifacts plus a terminal status); that task is
+    translated into the same typed events, while the non-terminal task a
+    streaming agent sends first is not surfaced. Transport and protocol
+    errors propagate to the caller. Creates and closes an HTTP client
+    only when ``httpx_client`` is not supplied; the A2A client is always
+    closed (it never closes a shared ``httpx_client``).
+    ``client_factory`` overrides how the A2A client is built from the
+    resolved card (a seam for tests that script the event stream).
     """
     owns_client = httpx_client is None
     http_client = httpx_client if httpx_client is not None else httpx.AsyncClient()
@@ -82,11 +97,31 @@ async def stream_reply(
                         state=status.state,
                         message=_status_message_text(status),
                     )
+                elif _is_final_task(event):
+                    # Non-streaming agents answer message/send with the
+                    # final task — artifacts plus a terminal status —
+                    # instead of streamed updates. Translate it into the
+                    # same typed events so consumers see one uniform
+                    # stream.
+                    for artifact in event.task.artifacts:
+                        for part in artifact.parts:
+                            if part.text:
+                                yield Delta(text=part.text)
+                    task_status = event.task.status
+                    yield Status(
+                        state=task_status.state,
+                        message=_status_message_text(task_status),
+                    )
         finally:
             await client.close()
     finally:
         if owns_client:
             await http_client.aclose()
+
+
+def _is_final_task(event) -> bool:
+    """Whether ``event`` carries a terminal-state task (a final reply)."""
+    return event.HasField("task") and event.task.status.state in _TERMINAL_TASK_STATES
 
 
 def _status_message_text(status) -> str | None:
