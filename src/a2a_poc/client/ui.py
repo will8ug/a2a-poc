@@ -32,19 +32,37 @@ class _StatusHolder:
         self.status: Status | None = None
 
 
+def status_info_text(status: Status) -> str | None:
+    """Return the message to show with ``st.info`` for a mid-stream status.
+
+    Non-failure statuses that carry a message (e.g. the host agent's
+    phase narration while delegating to sub-agents) render as an in-stream
+    info note. A FAILED status returns None: the failure reason goes
+    through the post-stream ``st.error`` path instead.
+    """
+    if status.message is None or status.state == TaskState.TASK_STATE_FAILED:
+        return None
+    return status.message
+
+
 async def _reply_text_stream(
     events: AsyncIterator[Delta | Status], holder: _StatusHolder
 ) -> AsyncIterator[str]:
     """Adapt ``stream_reply`` events for ``st.write_stream``.
 
     Yields only the ``Delta`` text chunks (so the reply streams as it
-    arrives) while recording the last ``Status`` into ``holder``.
+    arrives) while recording the last ``Status`` into ``holder`` and
+    rendering each render-worthy status as an ``st.info`` note before the
+    next chunk is yielded.
     """
     async for event in events:
         if isinstance(event, Delta):
             yield event.text
         elif isinstance(event, Status):
             holder.status = event
+            info_text = status_info_text(event)
+            if info_text is not None:
+                st.info(info_text)
 
 
 st.set_page_config(page_title="A2A PoC Chat", page_icon="🤖")

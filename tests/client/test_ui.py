@@ -7,11 +7,41 @@ They pin the session-state contract: history is a list of
 
 from pathlib import Path
 
+from a2a.types import TaskState
 from streamlit.testing.v1 import AppTest
+
+from a2a_poc.client.core import Status
+from a2a_poc.client.ui import status_info_text
 
 UI_SCRIPT = (
     Path(__file__).resolve().parents[2] / "src" / "a2a_poc" / "client" / "ui.py"
 )
+
+
+def test_status_info_text():
+    """Mid-stream statuses with a message render; FAILED stays st.error's job."""
+    assert (
+        status_info_text(
+            Status(
+                state=TaskState.TASK_STATE_WORKING,
+                message="Searching the web…",
+            )
+        )
+        == "Searching the web…"
+    )
+    assert (
+        status_info_text(Status(state=TaskState.TASK_STATE_WORKING, message=None))
+        is None
+    )
+    assert (
+        status_info_text(
+            Status(
+                state=TaskState.TASK_STATE_FAILED,
+                message="LLM call failed: boom",
+            )
+        )
+        is None
+    )
 
 
 def test_ui_renders_chat_page():
