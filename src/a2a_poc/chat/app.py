@@ -5,11 +5,11 @@ from a2a.server.request_handlers import DefaultRequestHandler
 from a2a.server.tasks import InMemoryTaskStore
 from fastapi import FastAPI
 
-from a2a_poc.server.agent import build_chat_agent
-from a2a_poc.server.card import build_agent_card
-from a2a_poc.server.config import Config, load_config
-from a2a_poc.server.executor import ChatAgentExecutor
-from a2a_poc.server.wiring import HOST, bind_a2a_routes, resolve_bind
+from a2a_poc.chat.agent import build_chat_agent
+from a2a_poc.chat.card import build_agent_card
+from a2a_poc.chat.config import Config, load_config
+from a2a_poc.chat.executor import ChatAgentExecutor
+from a2a_poc.wiring import HOST, bind_a2a_routes, resolve_bind
 
 PORT = 9999
 
@@ -34,7 +34,7 @@ def create_app(config: Config | None = None, port: int = PORT) -> FastAPI:
 
 
 def main() -> None:
-    """Run the server (console entry point ``a2a-poc-server``)."""
+    """Run the server (console entry point ``a2a-poc-chat``)."""
     host, port = resolve_bind(PORT)
     uvicorn.run(create_app(load_config(), port=port), host=host, port=port)
 

@@ -2,13 +2,13 @@
 
 A minimal proof of concept of the [A2A protocol](https://a2a-protocol.org).
 
-## Run the server
+## Run the chat agent
 
 ```sh
-uv run a2a-poc-server
+uv run a2a-poc-chat
 ```
 
-The server binds `127.0.0.1:9999` and serves its agent card at
+The chat agent binds `127.0.0.1:9999` and serves its agent card at
 <http://127.0.0.1:9999/.well-known/agent-card.json>.
 
 ## Run the client
@@ -67,7 +67,7 @@ Or run the agents in separate terminals:
 
 ```sh
 uv run a2a-poc-search-agent   # search agent, port 9997
-uv run a2a-poc-server         # chat agent, port 9999
+uv run a2a-poc-chat           # chat agent, port 9999
 uv run a2a-poc-host           # host, port 9998
 ```
 
@@ -110,7 +110,7 @@ uv run pytest
 Boot-check the server with dummy values — startup makes no LLM call:
 
 ```sh
-LLM_API_KEY=dummy LLM_BASE_URL=http://127.0.0.1:9999/v1 LLM_MODEL=dummy uv run a2a-poc-server &
+LLM_API_KEY=dummy LLM_BASE_URL=http://127.0.0.1:9999/v1 LLM_MODEL=dummy uv run a2a-poc-chat &
 SERVER_PID=$!
 sleep 3
 curl -sf http://127.0.0.1:9999/.well-known/agent-card.json

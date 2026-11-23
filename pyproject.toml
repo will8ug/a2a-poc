@@ -13,7 +13,7 @@ dependencies = [
 ]
 
 [project.scripts]
-a2a-poc-server = "a2a_poc.server.app:main"
+a2a-poc-chat = "a2a_poc.chat.app:main"
 a2a-poc-client = "a2a_poc.client.cli:main"
 a2a-poc-ui = "a2a_poc.client.ui:main"
 a2a-poc-search-agent = "a2a_poc.search.app:main"
@@ -34,6 +34,6 @@ build-backend = "uv_build"
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]
-# Test files repeat basenames across tests/server and tests/search (e.g.
+# Test files repeat basenames across tests/chat and tests/search (e.g.
 # test_config.py); importlib mode imports each by path so they don't collide.
 addopts = "--import-mode=importlib"

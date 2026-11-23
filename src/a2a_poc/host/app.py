@@ -12,9 +12,9 @@ from fastapi import FastAPI
 from a2a_poc.host.card import build_host_agent_card
 from a2a_poc.host.decision import DECIDER_SYSTEM_PROMPT, Decision, decide_with
 from a2a_poc.host.executor import HostAgentExecutor
-from a2a_poc.server.agent import build_chat_agent
-from a2a_poc.server.config import load_config
-from a2a_poc.server.wiring import HOST, bind_a2a_routes, resolve_bind
+from a2a_poc.chat.agent import build_chat_agent
+from a2a_poc.chat.config import load_config
+from a2a_poc.wiring import HOST, bind_a2a_routes, resolve_bind
 
 PORT = 9998
 

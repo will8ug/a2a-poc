@@ -72,7 +72,7 @@ def test_spawn_failure_terminates_already_spawned_children(monkeypatch):
 
     assert spawned_modules == [
         "a2a_poc.search.app",
-        "a2a_poc.server.app",
+        "a2a_poc.chat.app",
     ]
     # Orphan-prevention pin: the already-spawned child was terminated...
     assert first.terminate_calls == 1

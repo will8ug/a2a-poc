@@ -25,7 +25,7 @@ from a2a_poc.host.decision import Decision
 # Private by naming convention only: reusing the server executor's
 # look-ahead artifact stream keeps the artifact chunking protocol
 # knowledge in exactly one place (disclosed in the task report).
-from a2a_poc.server.executor import _ReplyArtifactStream
+from a2a_poc.chat.executor import _ReplyArtifactStream
 
 logger = logging.getLogger(__name__)
 

@@ -34,7 +34,7 @@ from a2a_poc.host.app import (
 # (log prefix, module) for each child, in spawn order.
 CHILDREN: tuple[tuple[str, str], ...] = (
     ("search", "a2a_poc.search.app"),
-    ("chat", "a2a_poc.server.app"),
+    ("chat", "a2a_poc.chat.app"),
     ("host", "a2a_poc.host.app"),
 )
 

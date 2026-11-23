@@ -14,7 +14,7 @@ from a2a.server.events import EventQueue
 from a2a.server.tasks import TaskUpdater
 from a2a.types import TaskState
 
-from a2a_poc.server.agent import ChatAgent
+from a2a_poc.chat.agent import ChatAgent
 
 logger = logging.getLogger(__name__)
 

@@ -4,7 +4,7 @@ from types import SimpleNamespace
 from a2a.helpers import new_text_message
 from a2a.types import Role, TaskState
 
-from a2a_poc.server.executor import ChatAgentExecutor
+from a2a_poc.chat.executor import ChatAgentExecutor
 
 
 class FakeAgent:
@@ -82,10 +82,10 @@ async def test_llm_failure_flushes_held_delta_before_failed():
 async def test_llm_failure_logs_exception_server_side(caplog):
     queue = FakeEventQueue()
     executor = ChatAgentExecutor(agent=FakeAgent(error=RuntimeError("boom")))
-    with caplog.at_level(logging.ERROR, logger="a2a_poc.server.executor"):
+    with caplog.at_level(logging.ERROR, logger="a2a_poc.chat.executor"):
         await executor.execute(_context("hi"), queue)
     assert any(
-        r.name == "a2a_poc.server.executor"
+        r.name == "a2a_poc.chat.executor"
         and r.levelno == logging.ERROR
         and "LLM call failed" in r.getMessage()
         for r in caplog.records

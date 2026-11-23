@@ -1,6 +1,6 @@
 from types import SimpleNamespace
 
-from a2a_poc.server.agent import SYSTEM_PROMPT, ChatAgent
+from a2a_poc.chat.agent import SYSTEM_PROMPT, ChatAgent
 
 
 def _chunk(text: str):

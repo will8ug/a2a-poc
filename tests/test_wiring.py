@@ -1,6 +1,6 @@
 import pytest
 
-from a2a_poc.server.wiring import HOST, resolve_bind
+from a2a_poc.wiring import HOST, resolve_bind
 
 
 def test_resolve_bind_default(monkeypatch):

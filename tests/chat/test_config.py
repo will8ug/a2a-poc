@@ -1,6 +1,6 @@
 import pytest
 
-from a2a_poc.server.config import Config, ConfigError, load_config
+from a2a_poc.chat.config import Config, ConfigError, load_config
 
 
 def test_load_config_reads_all_env_vars(monkeypatch):

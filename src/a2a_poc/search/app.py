@@ -9,7 +9,7 @@ from a2a_poc.search.card import build_search_agent_card
 from a2a_poc.search.config import load_tavily_config
 from a2a_poc.search.executor import SearchAgentExecutor
 from a2a_poc.search.tavily_client import TavilySearcher, build_tavily_searcher
-from a2a_poc.server.wiring import HOST, bind_a2a_routes, resolve_bind
+from a2a_poc.wiring import HOST, bind_a2a_routes, resolve_bind
 
 PORT = 9997
 

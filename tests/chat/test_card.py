@@ -1,6 +1,6 @@
 from google.protobuf.json_format import MessageToDict
 
-from a2a_poc.server.card import build_agent_card
+from a2a_poc.chat.card import build_agent_card
 
 BASE_URL = "http://127.0.0.1:9999"
 

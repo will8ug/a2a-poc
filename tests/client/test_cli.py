@@ -14,7 +14,7 @@ from a2a.types import (
     TaskStatusUpdateEvent,
 )
 
-from a2a_poc.server.card import build_agent_card
+from a2a_poc.chat.card import build_agent_card
 from a2a_poc.client.cli import main, run
 
 
