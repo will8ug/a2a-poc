@@ -1,6 +1,8 @@
 # a2a-poc
 
-A minimal proof of concept of the [A2A protocol](https://a2a-protocol.org).
+A proof of concept of the [A2A protocol](https://a2a-protocol.org): a chat
+agent, a Tavily web-search agent, and a host that orchestrates them into one
+pipeline.
 
 ## Run the chat agent
 
@@ -19,11 +21,15 @@ In another terminal:
 uv run a2a-poc-client "Say hello."
 ```
 
-Use `--base-url` to point the client at a server on a different address (default: `http://127.0.0.1:9999`):
+The client talks to any A2A agent. By default it targets the chat agent
+(`http://127.0.0.1:9999`). To drive the full multi-agent pipeline, point it
+at the host instead:
 
 ```sh
-uv run a2a-poc-client --base-url http://127.0.0.1:8080 "Say hello."
+uv run a2a-poc-client --base-url http://127.0.0.1:9998 "What's new with the A2A protocol?"
 ```
+
+See the Multi-agent demo section below for what the host does.
 
 ## Run the UI
 
@@ -34,9 +40,10 @@ In another terminal, start the UI and open the URL it prints (default:
 uv run a2a-poc-ui
 ```
 
-The chat keeps its history in the browser session. To talk to an agent
-running somewhere else, set **Agent base URL** in the sidebar (default:
-`http://127.0.0.1:9999`).
+The chat keeps its history in the browser session. **Agent base URL** in the
+sidebar accepts any A2A agent: the chat agent directly (the default,
+`http://127.0.0.1:9999`), or the host (`http://127.0.0.1:9998`) to drive the
+full pipeline. See the Multi-agent demo section below.
 
 ## Multi-agent demo
 
@@ -80,16 +87,6 @@ web…"), then the answer streams in. If search is unavailable, a note says
 so and the answer still arrives; a failed synthesis shows a red error box
 with the reason the task failed.
 
-### Degradation demo
-
-Run the three agents in separate terminals (above), then kill the
-search-agent process. The next search-needing question still gets an
-answer — the chat shows a "Search unavailable (…): answering without it"
-note first.
-
-(Under `a2a-poc-demo` this is not possible: the launcher treats a child
-process exiting as fatal and stops the others.)
-
 ### Custom ports
 
 Each process honours `A2A_POC_PORT` when run standalone, but the host
@@ -107,7 +104,7 @@ Run the test suite (no network or key needed):
 uv run pytest
 ```
 
-Boot-check the server with dummy values — startup makes no LLM call:
+Boot-check the chat agent with dummy values — startup makes no LLM call:
 
 ```sh
 LLM_API_KEY=dummy LLM_BASE_URL=http://127.0.0.1:9999/v1 LLM_MODEL=dummy uv run a2a-poc-chat &
