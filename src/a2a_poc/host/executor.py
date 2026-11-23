@@ -30,6 +30,7 @@ from a2a_poc.server.executor import _ReplyArtifactStream
 logger = logging.getLogger(__name__)
 
 _SEARCH_NARRATION = "Searching the web…"
+_SYNTHESIS_NARRATION = "Synthesizing the answer…"
 
 
 class HostAgentExecutor(AgentExecutor):
@@ -122,7 +123,15 @@ class HostAgentExecutor(AgentExecutor):
         )
 
     async def _relay(self, updater: TaskUpdater, prompt: str) -> None:
-        """Stream the chat agent's reply as the host task's artifact."""
+        """Stream the chat agent's reply as the host task's artifact.
+
+        Emits a synthesizing narration first (the chat agent synthesizes
+        the final answer whether or not search results were used).
+        """
+        await updater.update_status(
+            state=TaskState.TASK_STATE_WORKING,
+            message=new_text_message(_SYNTHESIS_NARRATION),
+        )
         reply = _ReplyArtifactStream()
         final_status: Status | None = None
         try:

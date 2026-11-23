@@ -129,6 +129,9 @@ async def test_no_search_relays_chat_reply_as_artifacts():
     # Only the chat agent is called, with the raw user text.
     assert stream.calls == [(CHAT_URL, "hi")]
     assert TaskState.TASK_STATE_WORKING in _status_states(queue.events)
+    assert any(
+        "Synthesizing the answer" in text for text in _status_texts(queue.events)
+    )
     assert _final_state(queue.events) == TaskState.TASK_STATE_COMPLETED
     assert _artifact_text(queue.events) == "Hello"
 
@@ -159,6 +162,9 @@ async def test_search_path_composes_question_and_results():
     assert "what is a2a?" in chat_prompt
     assert "A2A is an agent-to-agent protocol." in chat_prompt
     assert any("Searching the web" in text for text in _status_texts(queue.events))
+    assert any(
+        "Synthesizing the answer" in text for text in _status_texts(queue.events)
+    )
     assert _final_state(queue.events) == TaskState.TASK_STATE_COMPLETED
     # Only the synthesized chat reply becomes a host artifact.
     assert _artifact_text(queue.events) == "synthesized"

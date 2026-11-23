@@ -6,7 +6,9 @@ subprocess and supervises them:
 * every output line is printed with a ``[name]`` prefix;
 * the host child gets ``CHAT_AGENT_URL``/``SEARCH_AGENT_URL`` (the spec
   defaults, imported from the host module) injected into its environment
-  explicitly;
+  explicitly, while ambient ``A2A_POC_PORT`` is stripped from every child
+  (the launcher always uses the default ports; an exported port override
+  would otherwise make all three children bind one port);
 * SIGINT/SIGTERM to the launcher terminates every child, waits for them,
   and exits cleanly;
 * a child that exits on its own terminates its siblings, is reported by
@@ -43,10 +45,14 @@ TERMINATE_TIMEOUT = 10.0
 async def _spawn(name: str, module: str) -> asyncio.subprocess.Process:
     """Start ``python -m module`` with merged, piped output.
 
-    The host child additionally gets the agent URLs injected explicitly,
-    so the demo does not depend on ambient environment settings.
+    Ambient ``A2A_POC_PORT`` is stripped from the child env so the
+    launcher's fixed default ports always win: the three children must
+    never race for one port. The host child additionally gets the agent
+    URLs injected explicitly, so the demo does not depend on ambient
+    environment settings either.
     """
     env = os.environ.copy()
+    env.pop("A2A_POC_PORT", None)
     if name == "host":
         env[CHAT_AGENT_URL_ENV] = DEFAULT_CHAT_AGENT_URL
         env[SEARCH_AGENT_URL_ENV] = DEFAULT_SEARCH_AGENT_URL

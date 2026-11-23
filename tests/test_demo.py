@@ -1,10 +1,12 @@
 """Offline tests for the demo launcher's supervision invariants.
 
-The plan pinned the end-to-end boot/SIGINT check as demo.py's test, but a
-review finding superseded that for one invariant: a spawn failure mid-boot
-must not orphan the children already spawned. That invariant is pinned here
-with a monkeypatched ``asyncio.create_subprocess_exec``; everything else
-about the launcher stays covered by the end-to-end check.
+The plan pinned the end-to-end boot/SIGINT check as demo.py's test, but
+review findings superseded that for two invariants: a spawn failure
+mid-boot must not orphan the children already spawned, and ambient
+``A2A_POC_PORT`` must not reach any child (the launcher always uses the
+fixed default ports). Both are pinned here with a monkeypatched
+``asyncio.create_subprocess_exec``; everything else about the launcher
+stays covered by the end-to-end check.
 """
 
 import asyncio
@@ -50,14 +52,20 @@ def test_spawn_failure_terminates_already_spawned_children(monkeypatch):
     """
     first = _FakeProcess()
     spawned_modules: list[Any] = []
+    spawned_envs: list[Any] = []
 
     async def fake_exec(*args: Any, **kwargs: Any) -> _FakeProcess:
         spawned_modules.append(args[2])  # (python, "-m", module)
+        spawned_envs.append(kwargs.get("env"))
         if len(spawned_modules) == 1:
             return first
         raise OSError("simulated spawn failure (fd/process limit)")
 
     monkeypatch.setattr(asyncio, "create_subprocess_exec", fake_exec)
+    # An exported port override in the launcher's own environment: it must
+    # not reach any child (README: "The demo launcher always uses the
+    # default ports"), or all three children would race for one port.
+    monkeypatch.setenv("A2A_POC_PORT", "7777")
 
     with pytest.raises(OSError, match="simulated spawn failure"):
         demo.main()
@@ -70,3 +78,7 @@ def test_spawn_failure_terminates_already_spawned_children(monkeypatch):
     assert first.terminate_calls == 1
     # ...and waited on (reaped), not just signalled.
     assert first.wait_calls == 1
+    # Port pin: every child env is passed explicitly and carries no
+    # ambient A2A_POC_PORT.
+    assert spawned_envs[0] is not None
+    assert "A2A_POC_PORT" not in spawned_envs[0]
