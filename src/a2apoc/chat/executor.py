@@ -12,8 +12,8 @@ from a2a.server.events import EventQueue
 from a2a.server.tasks import TaskUpdater
 from a2a.types import TaskState
 
-from a2a_poc.llm import ChatAgent
-from a2a_poc.wiring import ReplyArtifactStream
+from a2apoc.llm import ChatAgent
+from a2apoc.wiring import ReplyArtifactStream
 
 logger = logging.getLogger(__name__)
 

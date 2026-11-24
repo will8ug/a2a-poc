@@ -1,7 +1,7 @@
 from fastapi.testclient import TestClient
 
-from a2a_poc.chat.app import create_app
-from a2a_poc.llm import Config
+from a2apoc.chat.app import create_app
+from a2apoc.llm import Config
 
 
 def _app():

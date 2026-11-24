@@ -14,7 +14,7 @@ from a2a.server.events import EventQueue
 from a2a.server.tasks import TaskUpdater
 from a2a.types import TaskState
 
-from a2a_poc.search.tavily_client import TavilySearcher
+from a2apoc.search.tavily_client import TavilySearcher
 
 logger = logging.getLogger(__name__)
 

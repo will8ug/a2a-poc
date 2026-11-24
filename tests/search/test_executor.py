@@ -4,7 +4,7 @@ from types import SimpleNamespace
 from a2a.helpers import new_text_message
 from a2a.types import Role, TaskState
 
-from a2a_poc.search.executor import SearchAgentExecutor
+from a2apoc.search.executor import SearchAgentExecutor
 
 
 class FakeSearcher:
@@ -79,10 +79,10 @@ async def test_searcher_failure_logs_exception_server_side(caplog):
     queue = FakeEventQueue()
     searcher = FakeSearcher(error=RuntimeError("boom"))
     executor = SearchAgentExecutor(searcher=searcher)
-    with caplog.at_level(logging.ERROR, logger="a2a_poc.search.executor"):
+    with caplog.at_level(logging.ERROR, logger="a2apoc.search.executor"):
         await executor.execute(_context("hi"), queue)
     assert any(
-        r.name == "a2a_poc.search.executor"
+        r.name == "a2apoc.search.executor"
         and r.levelno == logging.ERROR
         and "Search failed" in r.getMessage()
         for r in caplog.records

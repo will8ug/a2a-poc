@@ -1,6 +1,6 @@
 """Demo launcher: run the search agent, chat agent, and host together.
 
-``main`` spawns each server as a ``sys.executable -m a2a_poc...``
+``main`` spawns each server as a ``sys.executable -m a2apoc...``
 subprocess and supervises them:
 
 * every output line is printed with a ``[name]`` prefix;
@@ -24,7 +24,7 @@ import os
 import signal
 import sys
 
-from a2a_poc.host.app import (
+from a2apoc.host.app import (
     CHAT_AGENT_URL_ENV,
     DEFAULT_CHAT_AGENT_URL,
     DEFAULT_SEARCH_AGENT_URL,
@@ -33,9 +33,9 @@ from a2a_poc.host.app import (
 
 # (log prefix, module) for each child, in spawn order.
 CHILDREN: tuple[tuple[str, str], ...] = (
-    ("search", "a2a_poc.search.app"),
-    ("chat", "a2a_poc.chat.app"),
-    ("host", "a2a_poc.host.app"),
+    ("search", "a2apoc.search.app"),
+    ("chat", "a2apoc.chat.app"),
+    ("host", "a2apoc.host.app"),
 )
 
 # Seconds to wait after terminate() before escalating to kill().

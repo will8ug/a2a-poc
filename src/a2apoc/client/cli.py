@@ -9,7 +9,7 @@ import httpx
 from a2a.client import A2AClientError
 from a2a.types import TaskState
 
-from a2a_poc.client.core import (
+from a2apoc.client.core import (
     DEFAULT_BASE_URL,
     ClientFactory,
     Delta,

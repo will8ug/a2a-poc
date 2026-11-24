@@ -13,12 +13,12 @@ dependencies = [
 ]
 
 [project.scripts]
-a2a-poc-chat = "a2a_poc.chat.app:main"
-a2a-poc-client = "a2a_poc.client.cli:main"
-a2a-poc-ui = "a2a_poc.client.ui:main"
-a2a-poc-search-agent = "a2a_poc.search.app:main"
-a2a-poc-host = "a2a_poc.host.app:main"
-a2a-poc-demo = "a2a_poc.demo:main"
+a2a-poc-chat = "a2apoc.chat.app:main"
+a2a-poc-client = "a2apoc.client.cli:main"
+a2a-poc-ui = "a2apoc.client.ui:main"
+a2a-poc-search-agent = "a2apoc.search.app:main"
+a2a-poc-host = "a2apoc.host.app:main"
+a2a-poc-demo = "a2apoc.demo:main"
 
 [dependency-groups]
 dev = [
@@ -29,6 +29,11 @@ dev = [
 [build-system]
 requires = ["uv_build>=0.13.7,<0.14.0"]
 build-backend = "uv_build"
+
+# uv_build otherwise derives the module name from the project name
+# (a2a-poc → underscore form); the import package is "a2apoc".
+[tool.uv.build-backend]
+module-name = "a2apoc"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

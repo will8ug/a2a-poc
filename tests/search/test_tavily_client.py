@@ -1,4 +1,4 @@
-from a2a_poc.search.tavily_client import TavilySearcher
+from a2apoc.search.tavily_client import TavilySearcher
 
 
 class FakeTavilyClient:

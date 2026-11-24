@@ -3,7 +3,7 @@
 Streamlit executes this script top to bottom on ``streamlit run``, so the
 rendering code below runs unconditionally; ``main`` exists only for the
 ``a2a-poc-ui`` console script and bootstraps Streamlit on this file. The UI
-is a pure frontend: it consumes ``a2a_poc.client.core.stream_reply`` and
+is a pure frontend: it consumes ``a2apoc.client.core.stream_reply`` and
 translates its events (and errors) into Streamlit elements.
 """
 
@@ -17,7 +17,7 @@ import streamlit as st
 from a2a.client import A2AClientError
 from a2a.types import TaskState
 
-from a2a_poc.client.core import (
+from a2apoc.client.core import (
     DEFAULT_BASE_URL,
     Delta,
     Status,

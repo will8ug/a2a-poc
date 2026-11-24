@@ -1,6 +1,6 @@
 import pytest
 
-from a2a_poc.search.config import TavilyConfigError, load_tavily_config
+from a2apoc.search.config import TavilyConfigError, load_tavily_config
 
 
 def test_load_tavily_config_reads_env_var(monkeypatch):

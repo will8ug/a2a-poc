@@ -2,8 +2,8 @@
 
 from fastapi.testclient import TestClient
 
-from a2a_poc.host.app import create_host_app
-from a2a_poc.host.decision import Decision
+from a2apoc.host.app import create_host_app
+from a2apoc.host.decision import Decision
 
 CHAT_URL = "http://chat.test"
 SEARCH_URL = "http://search.test"

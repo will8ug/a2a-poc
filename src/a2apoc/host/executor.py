@@ -19,9 +19,9 @@ from a2a.server.events import EventQueue
 from a2a.server.tasks import TaskUpdater
 from a2a.types import TaskState
 
-from a2a_poc.client.core import Delta, Status, stream_reply
-from a2a_poc.host.decision import Decision
-from a2a_poc.wiring import ReplyArtifactStream
+from a2apoc.client.core import Delta, Status, stream_reply
+from a2apoc.host.decision import Decision
+from a2apoc.wiring import ReplyArtifactStream
 
 logger = logging.getLogger(__name__)
 

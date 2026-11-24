@@ -5,9 +5,9 @@ from types import SimpleNamespace
 from a2a.helpers import new_text_message
 from a2a.types import Role, TaskState
 
-from a2a_poc.client.core import Delta, Status
-from a2a_poc.host.decision import Decision
-from a2a_poc.host.executor import HostAgentExecutor
+from a2apoc.client.core import Delta, Status
+from a2apoc.host.decision import Decision
+from a2apoc.host.executor import HostAgentExecutor
 
 CHAT_URL = "http://chat.test"
 SEARCH_URL = "http://search.test"

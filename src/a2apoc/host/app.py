@@ -9,11 +9,11 @@ from a2a.server.request_handlers import DefaultRequestHandler
 from a2a.server.tasks import InMemoryTaskStore
 from fastapi import FastAPI
 
-from a2a_poc.host.card import build_host_agent_card
-from a2a_poc.host.decision import DECIDER_SYSTEM_PROMPT, Decision, decide_with
-from a2a_poc.host.executor import HostAgentExecutor
-from a2a_poc.llm import build_chat_agent, load_config
-from a2a_poc.wiring import HOST, bind_a2a_routes, resolve_bind
+from a2apoc.host.card import build_host_agent_card
+from a2apoc.host.decision import DECIDER_SYSTEM_PROMPT, Decision, decide_with
+from a2apoc.host.executor import HostAgentExecutor
+from a2apoc.llm import build_chat_agent, load_config
+from a2apoc.wiring import HOST, bind_a2a_routes, resolve_bind
 
 PORT = 9998
 

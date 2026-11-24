@@ -10,11 +10,11 @@ from pathlib import Path
 from a2a.types import TaskState
 from streamlit.testing.v1 import AppTest
 
-from a2a_poc.client.core import Status
-from a2a_poc.client.ui import status_info_text
+from a2apoc.client.core import Status
+from a2apoc.client.ui import status_info_text
 
 UI_SCRIPT = (
-    Path(__file__).resolve().parents[2] / "src" / "a2a_poc" / "client" / "ui.py"
+    Path(__file__).resolve().parents[2] / "src" / "a2apoc" / "client" / "ui.py"
 )
 
 

@@ -1,6 +1,6 @@
 """Tests for the host's search-or-not decision parsing."""
 
-from a2a_poc.host.decision import Decision, decide_with
+from a2apoc.host.decision import Decision, decide_with
 
 
 class FakeAgent:

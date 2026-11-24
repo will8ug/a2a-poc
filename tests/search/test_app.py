@@ -1,7 +1,7 @@
 from fastapi.testclient import TestClient
 
-from a2a_poc.search.app import create_search_app
-from a2a_poc.search.tavily_client import TavilySearcher
+from a2apoc.search.app import create_search_app
+from a2apoc.search.tavily_client import TavilySearcher
 
 
 class FakeTavilyClient:

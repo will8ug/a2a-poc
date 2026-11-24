@@ -2,7 +2,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from a2a_poc.llm import ChatAgent, Config, ConfigError, SYSTEM_PROMPT, load_config
+from a2apoc.llm import ChatAgent, Config, ConfigError, SYSTEM_PROMPT, load_config
 
 
 def test_load_config_reads_all_env_vars(monkeypatch):

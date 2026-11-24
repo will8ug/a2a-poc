@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 
-from a2a_poc.llm import ChatAgent
+from a2apoc.llm import ChatAgent
 
 DECIDER_SYSTEM_PROMPT = (
     "You are a routing assistant. Decide whether answering the user's message "
