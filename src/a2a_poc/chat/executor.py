@@ -1,72 +1,21 @@
 """A2A agent executor bridging ChatAgent streams to task lifecycle events."""
 
 import logging
-import uuid
 
 from a2a.helpers import (
     get_message_text,
     new_task_from_user_message,
     new_text_message,
-    new_text_part,
 )
 from a2a.server.agent_execution import AgentExecutor, RequestContext
 from a2a.server.events import EventQueue
 from a2a.server.tasks import TaskUpdater
 from a2a.types import TaskState
 
-from a2a_poc.chat.agent import ChatAgent
+from a2a_poc.llm import ChatAgent
+from a2a_poc.wiring import ReplyArtifactStream
 
 logger = logging.getLogger(__name__)
-
-_REPLY_ARTIFACT_NAME = "reply"
-
-
-class _ReplyArtifactStream:
-    """Streams one reply artifact through a one-delta look-ahead buffer.
-
-    All chunks share one artifact id: the first chunk creates the
-    artifact, later ones append to it, and the final one is flagged as
-    the last chunk. Each delta is held until the next one arrives (or
-    the stream ends) so the final update can be marked ``last_chunk``.
-    """
-
-    def __init__(self) -> None:
-        self._artifact_id = str(uuid.uuid4())
-        self._append = False
-        self._pending: str | None = None
-
-    async def push(self, updater: TaskUpdater, delta: str) -> None:
-        """Hold ``delta`` back, emitting the previously held one, if any."""
-        if self._pending is not None:
-            await self._emit(updater, self._pending)
-        self._pending = delta
-
-    async def finish(self, updater: TaskUpdater) -> None:
-        """Emit the held delta, if any, as the artifact's final chunk."""
-        if self._pending is not None:
-            await self._emit(updater, self._pending, last_chunk=True)
-            self._pending = None
-
-    async def flush_partial(self, updater: TaskUpdater) -> None:
-        """Emit the held delta, if any, after a mid-stream failure.
-
-        The emission is never marked ``last_chunk``: the reply was cut
-        short, so consumers must not treat the artifact as complete.
-        """
-        if self._pending is not None:
-            await self._emit(updater, self._pending)
-
-    async def _emit(
-        self, updater: TaskUpdater, text: str, last_chunk: bool | None = None
-    ) -> None:
-        await updater.add_artifact(
-            [new_text_part(text)],
-            artifact_id=self._artifact_id,
-            name=_REPLY_ARTIFACT_NAME,
-            append=self._append,
-            last_chunk=last_chunk,
-        )
-        self._append = True
 
 
 class ChatAgentExecutor(AgentExecutor):
@@ -94,7 +43,7 @@ class ChatAgentExecutor(AgentExecutor):
             context_id=task.context_id,
         )
         await updater.update_status(state=TaskState.TASK_STATE_WORKING)
-        reply = _ReplyArtifactStream()
+        reply = ReplyArtifactStream()
         try:
             async for delta in self._agent.stream_reply(
                 get_message_text(context.message)

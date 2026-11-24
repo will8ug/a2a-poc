@@ -1,13 +1,17 @@
-"""Shared A2A server wiring: bind-address resolution and route attachment."""
+"""Shared A2A server wiring: bind-address resolution, route attachment,
+and the look-ahead reply artifact stream."""
 
 import os
+import uuid
 
+from a2a.helpers import new_text_part
 from a2a.server.request_handlers import DefaultRequestHandler
 from a2a.server.routes import (
     add_a2a_routes_to_fastapi,
     create_agent_card_routes,
     create_jsonrpc_routes,
 )
+from a2a.server.tasks import TaskUpdater
 from a2a.types import AgentCard
 from a2a.utils import AGENT_CARD_WELL_KNOWN_PATH, DEFAULT_RPC_URL
 from fastapi import FastAPI
@@ -50,3 +54,54 @@ def bind_a2a_routes(
         ),
     )
     return app
+
+
+_REPLY_ARTIFACT_NAME = "reply"
+
+
+class ReplyArtifactStream:
+    """Streams one reply artifact through a one-delta look-ahead buffer.
+
+    All chunks share one artifact id: the first chunk creates the
+    artifact, later ones append to it, and the final one is flagged as
+    the last chunk. Each delta is held until the next one arrives (or
+    the stream ends) so the final update can be marked ``last_chunk``.
+    """
+
+    def __init__(self) -> None:
+        self._artifact_id = str(uuid.uuid4())
+        self._append = False
+        self._pending: str | None = None
+
+    async def push(self, updater: TaskUpdater, delta: str) -> None:
+        """Hold ``delta`` back, emitting the previously held one, if any."""
+        if self._pending is not None:
+            await self._emit(updater, self._pending)
+        self._pending = delta
+
+    async def finish(self, updater: TaskUpdater) -> None:
+        """Emit the held delta, if any, as the artifact's final chunk."""
+        if self._pending is not None:
+            await self._emit(updater, self._pending, last_chunk=True)
+            self._pending = None
+
+    async def flush_partial(self, updater: TaskUpdater) -> None:
+        """Emit the held delta, if any, after a mid-stream failure.
+
+        The emission is never marked ``last_chunk``: the reply was cut
+        short, so consumers must not treat the artifact as complete.
+        """
+        if self._pending is not None:
+            await self._emit(updater, self._pending)
+
+    async def _emit(
+        self, updater: TaskUpdater, text: str, last_chunk: bool | None = None
+    ) -> None:
+        await updater.add_artifact(
+            [new_text_part(text)],
+            artifact_id=self._artifact_id,
+            name=_REPLY_ARTIFACT_NAME,
+            append=self._append,
+            last_chunk=last_chunk,
+        )
+        self._append = True

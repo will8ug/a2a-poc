@@ -21,11 +21,7 @@ from a2a.types import TaskState
 
 from a2a_poc.client.core import Delta, Status, stream_reply
 from a2a_poc.host.decision import Decision
-
-# Private by naming convention only: reusing the server executor's
-# look-ahead artifact stream keeps the artifact chunking protocol
-# knowledge in exactly one place (disclosed in the task report).
-from a2a_poc.chat.executor import _ReplyArtifactStream
+from a2a_poc.wiring import ReplyArtifactStream
 
 logger = logging.getLogger(__name__)
 
@@ -132,7 +128,7 @@ class HostAgentExecutor(AgentExecutor):
             state=TaskState.TASK_STATE_WORKING,
             message=new_text_message(_SYNTHESIS_NARRATION),
         )
-        reply = _ReplyArtifactStream()
+        reply = ReplyArtifactStream()
         final_status: Status | None = None
         try:
             async for event in self._stream(self._chat_url, prompt):

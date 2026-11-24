@@ -5,10 +5,9 @@ from a2a.server.request_handlers import DefaultRequestHandler
 from a2a.server.tasks import InMemoryTaskStore
 from fastapi import FastAPI
 
-from a2a_poc.chat.agent import build_chat_agent
 from a2a_poc.chat.card import build_agent_card
-from a2a_poc.chat.config import Config, load_config
 from a2a_poc.chat.executor import ChatAgentExecutor
+from a2a_poc.llm import Config, build_chat_agent, load_config
 from a2a_poc.wiring import HOST, bind_a2a_routes, resolve_bind
 
 PORT = 9999
