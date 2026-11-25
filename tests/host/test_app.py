@@ -10,7 +10,7 @@ SEARCH_URL = "http://search.test"
 
 
 async def _fake_decider(user_text: str):
-    return Decision(needs_search=False, query="")
+    return Decision(needs_search=False)
 
 
 def _app():

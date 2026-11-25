@@ -109,7 +109,7 @@ def _status_texts(events):
 
 
 def _no_search():
-    return Decision(needs_search=False, query="")
+    return Decision(needs_search=False)
 
 
 # Scenario 1: no search needed — relay the chat agent's streamed reply.
@@ -148,7 +148,7 @@ async def test_search_path_composes_question_and_results():
     )
     stream.script(CHAT_URL, [_working(), Delta("syn"), Delta("thesized"), _completed()])
     executor = HostAgentExecutor(
-        FakeDecider(Decision(needs_search=True, query="a2a protocol")),
+        FakeDecider(Decision(needs_search=True)),
         CHAT_URL,
         SEARCH_URL,
         stream=stream,
@@ -156,7 +156,8 @@ async def test_search_path_composes_question_and_results():
 
     await executor.execute(_context("what is a2a?"), queue)
 
-    assert stream.calls[0] == (SEARCH_URL, "a2a protocol")
+    # The search agent gets the raw user text (no query refinement).
+    assert stream.calls[0] == (SEARCH_URL, "what is a2a?")
     chat_url, chat_prompt = stream.calls[1]
     assert chat_url == CHAT_URL
     assert "what is a2a?" in chat_prompt
@@ -179,7 +180,7 @@ async def test_search_error_degrades_to_direct_answer():
     stream.script(SEARCH_URL, [RuntimeError("connection refused")])
     stream.script(CHAT_URL, [_working(), Delta("direct answer"), _completed()])
     executor = HostAgentExecutor(
-        FakeDecider(Decision(needs_search=True, query="q")),
+        FakeDecider(Decision(needs_search=True)),
         CHAT_URL,
         SEARCH_URL,
         stream=stream,
@@ -204,7 +205,7 @@ async def test_search_failed_status_degrades_to_direct_answer():
     stream.script(SEARCH_URL, [Delta("partial results"), _failed("Tavily API error")])
     stream.script(CHAT_URL, [_working(), Delta("direct answer"), _completed()])
     executor = HostAgentExecutor(
-        FakeDecider(Decision(needs_search=True, query="q")),
+        FakeDecider(Decision(needs_search=True)),
         CHAT_URL,
         SEARCH_URL,
         stream=stream,

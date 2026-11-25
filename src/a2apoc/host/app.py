@@ -1,24 +1,26 @@
 """FastAPI server exposing the PoC multi-agent host over the A2A protocol."""
 
-import functools
 import os
 from collections.abc import Awaitable, Callable
 
+import httpx
 import uvicorn
 from a2a.server.request_handlers import DefaultRequestHandler
 from a2a.server.tasks import InMemoryTaskStore
+from dotenv import load_dotenv
 from fastapi import FastAPI
 
 from a2apoc.host.card import build_host_agent_card
-from a2apoc.host.decision import DECIDER_SYSTEM_PROMPT, Decision, decide_with
+from a2apoc.host.decision import DEFAULT_MODEL, Decision, OpenCodeDecider
 from a2apoc.host.executor import HostAgentExecutor
-from a2apoc.llm import build_chat_agent, load_config
 from a2apoc.wiring import HOST, bind_a2a_routes, resolve_bind
 
 PORT = 9998
 
 CHAT_AGENT_URL_ENV = "CHAT_AGENT_URL"
 SEARCH_AGENT_URL_ENV = "SEARCH_AGENT_URL"
+OPENCODE_API_KEY_ENV = "OPENCODE_API_KEY"
+DECISION_MODEL_ENV = "A2A_POC_DECISION_MODEL"
 
 DEFAULT_CHAT_AGENT_URL = "http://127.0.0.1:9999"
 DEFAULT_SEARCH_AGENT_URL = "http://127.0.0.1:9997"
@@ -32,10 +34,10 @@ def create_host_app(
     """Build a FastAPI app serving the host agent card and A2A routes.
 
     ``decider`` is the async callable ``(user_text) -> Decision`` routing
-    each message (tests inject a fake; ``main`` builds one around a
-    ChatAgent). ``chat_url``/``search_url`` are the downstream agents'
-    base URLs. ``port`` defaults to :data:`PORT` and sets the URL the
-    agent card advertises.
+    each message (tests inject a fake; ``main`` builds an
+    ``OpenCodeDecider``). ``chat_url``/``search_url`` are the downstream
+    agents' base URLs. ``port`` defaults to :data:`PORT` and sets the URL
+    the agent card advertises.
     """
     card = build_host_agent_card(f"http://{HOST}:{port}")
     handler = DefaultRequestHandler(
@@ -49,9 +51,21 @@ def create_host_app(
 
 def main() -> None:
     """Run the host (console entry point ``a2a-poc-host``)."""
-    config = load_config()
-    agent = build_chat_agent(config, system_prompt=DECIDER_SYSTEM_PROMPT)
-    decider = functools.partial(decide_with, agent)
+    load_dotenv(".env")
+    api_key = os.environ.get(OPENCODE_API_KEY_ENV)
+    if not api_key:
+        raise RuntimeError(
+            f"Missing required environment variable: {OPENCODE_API_KEY_ENV}. "
+            "Copy .env.example to .env and fill in values."
+        )
+    model = os.environ.get(DECISION_MODEL_ENV, DEFAULT_MODEL)
+    # The decider never sees the key: it rides the client's default
+    # headers, as the Tavily key rides the Tavily client.
+    client = httpx.AsyncClient(
+        timeout=httpx.Timeout(30.0),
+        headers={"Authorization": f"Bearer {api_key}"},
+    )
+    decider = OpenCodeDecider(client=client, model=model)
     chat_url = os.environ.get(CHAT_AGENT_URL_ENV, DEFAULT_CHAT_AGENT_URL)
     search_url = os.environ.get(SEARCH_AGENT_URL_ENV, DEFAULT_SEARCH_AGENT_URL)
     host, port = resolve_bind(PORT)

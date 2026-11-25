@@ -4,6 +4,18 @@ A proof of concept of the [A2A protocol](https://a2a-protocol.org): a chat
 agent, a Tavily web-search agent, and a host that orchestrates them into one
 pipeline.
 
+## Configure
+
+Copy `.env.example` to `.env` and fill in the keys:
+
+- `LLM_API_KEY` / `LLM_BASE_URL` / `LLM_MODEL` — the chat agent's LLM.
+- `TAVILY_API_KEY` — the search agent's web-search API.
+- `OPENCODE_API_KEY` — the host's decision model (routes each message
+  to search or direct answer; the host makes no LLM calls of its own).
+
+`A2A_POC_DECISION_MODEL` optionally overrides the host's decision model
+(default `gemini-decision-1`).
+
 ## Run the chat agent
 
 ```sh
@@ -52,13 +64,13 @@ the host; the host↔agent hops are real A2A traffic.
 
 ```
 user ──"What's new with X?"──▶  HOST (A2A agent, port 9998)
-                                1. decide: internet knowledge needed? (one LLM call → "SEARCH: <query>" | "NO_SEARCH")
-                                2. ── query ──▶  SEARCH AGENT (port 9997) → Tavily → results as text
+                                1. decide: internet knowledge needed? (decision model → yes/no)
+                                2. ── raw message ──▶  SEARCH AGENT (port 9997) → Tavily → results as text
                                 3. ── question + results ──▶  CHAT AGENT (port 9999)
                                 4. ◀── streamed, synthesized answer (relayed live to the user)
 ```
 
-When no web knowledge is needed (`NO_SEARCH`), the host delegates straight
+When no web knowledge is needed, the host delegates straight
 to the chat agent.
 
 ### Run

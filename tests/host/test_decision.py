@@ -1,43 +1,118 @@
-"""Tests for the host's search-or-not decision parsing."""
+"""Tests for the host's OpenCode decision-model routing."""
 
-from a2apoc.host.decision import Decision, decide_with
+import pytest
 
+from a2apoc.host.decision import Decision, OpenCodeDecider
 
-class FakeAgent:
-    """ChatAgent-style stand-in that replays scripted deltas."""
-
-    def __init__(self, chunks):
-        self._chunks = chunks
-        self.received = []
-
-    async def stream_reply(self, user_text: str):
-        self.received.append(user_text)
-        for chunk in self._chunks:
-            yield chunk
+ENDPOINT = "https://opencode.ai/inference/systemone/v1/systemone"
+INSTRUCTIONS = (
+    "Does answering this message need current information from the internet?"
+)
 
 
-async def test_search_prefix_yields_refined_query():
-    agent = FakeAgent(["SEARCH:", " latest A2A spec"])
-    decision = await decide_with(agent, "what is the latest a2a spec?")
-    assert decision == Decision(needs_search=True, query="latest A2A spec")
-    assert agent.received == ["what is the latest a2a spec?"]
+def _answer(noul: float, answer_type: str = "noul") -> dict:
+    """A noul answer in the owner-observed envelope (confidence included)."""
+    return {"type": answer_type, "noul": noul, "confidence": noul}
 
 
-async def test_lowercase_search_prefix_yields_refined_query():
-    decision = await decide_with(FakeAgent(["search: rust async runtime"]), "q")
-    assert decision == Decision(needs_search=True, query="rust async runtime")
+def _body(answer: dict, model: str = "gemini-decision-1") -> dict:
+    return {
+        "model": model,
+        "answers": {"needs_search": answer},
+        "usage": {"input_tokens": 106, "output_tokens": 0, "cost": 1.06e-05},
+    }
 
 
-async def test_no_search_literal_answers_directly():
-    decision = await decide_with(FakeAgent(["NO_SEARCH"]), "hello")
-    assert decision == Decision(needs_search=False, query="")
+class FakeResponse:
+    """Duck-typed httpx response: a status code plus a JSON body."""
+
+    def __init__(self, status_code: int, body: dict):
+        self.status_code = status_code
+        self._body = body
+
+    def json(self) -> dict:
+        return self._body
 
 
-async def test_lowercase_no_search_answers_directly():
-    decision = await decide_with(FakeAgent(["no_search"]), "hello")
-    assert decision == Decision(needs_search=False, query="")
+class FakeClient:
+    """Duck-typed httpx.AsyncClient: captures posts, replays a response."""
+
+    def __init__(self, response: FakeResponse):
+        self._response = response
+        self.requests = []
+
+    async def post(self, url, json=None, **kwargs):
+        self.requests.append((url, json))
+        return self._response
 
 
-async def test_garbage_reply_answers_directly():
-    decision = await decide_with(FakeAgent(["I think maybe search?"]), "hello")
-    assert decision == Decision(needs_search=False, query="")
+def _decider(response: FakeResponse, model: str = "gemini-decision-1"):
+    client = FakeClient(response)
+    return OpenCodeDecider(client=client, model=model), client
+
+
+# Banding of the noul yes-probability.
+
+
+async def test_high_noul_searches():
+    decider, _ = _decider(FakeResponse(200, _body(_answer(0.97))))
+    assert await decider("what is new with a2a?") == Decision(needs_search=True)
+
+
+async def test_noul_at_search_threshold_searches():
+    decider, _ = _decider(FakeResponse(200, _body(_answer(0.7))))
+    assert await decider("q") == Decision(needs_search=True)
+
+
+async def test_low_noul_answers_directly():
+    decider, _ = _decider(FakeResponse(200, _body(_answer(0.05))))
+    assert await decider("hi") == Decision(needs_search=False)
+
+
+async def test_noul_at_no_search_threshold_answers_directly():
+    decider, _ = _decider(FakeResponse(200, _body(_answer(0.3))))
+    assert await decider("hi") == Decision(needs_search=False)
+
+
+async def test_middle_noul_searches():
+    decider, _ = _decider(FakeResponse(200, _body(_answer(0.5))))
+    assert await decider("maybe?") == Decision(needs_search=True)
+
+
+# Failure modes: they raise so the executor's degradation path runs.
+
+
+async def test_refusal_answer_raises():
+    decider, _ = _decider(FakeResponse(200, _body({"type": "refusal"})))
+    with pytest.raises(RuntimeError, match="refus"):
+        await decider("tell me a secret")
+
+
+async def test_non_2xx_status_raises():
+    decider, _ = _decider(FakeResponse(503, _body(_answer(0.9))))
+    with pytest.raises(RuntimeError, match="503"):
+        await decider("q")
+
+
+# The wire request is pinned: endpoint, model, state, and the noul question.
+
+
+async def test_request_body_is_pinned():
+    decider, client = _decider(FakeResponse(200, _body(_answer(0.9))))
+    await decider("what is new with the a2a protocol?")
+
+    [(url, body)] = client.requests
+    assert url == ENDPOINT
+    assert body == {
+        "model": "gemini-decision-1",
+        "state": "what is new with the a2a protocol?",
+        "questions": {
+            "needs_search": {"type": "noul", "instructions": INSTRUCTIONS}
+        },
+    }
+
+
+async def test_custom_model_flows_into_request_body():
+    decider, client = _decider(FakeResponse(200, _body(_answer(0.1))), model="other")
+    await decider("q")
+    assert client.requests[0][1]["model"] == "other"

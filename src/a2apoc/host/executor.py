@@ -61,7 +61,7 @@ class HostAgentExecutor(AgentExecutor):
 
         decision = await self._decide(updater, user_text)
         results_text = (
-            await self._search(updater, decision) if decision.needs_search else None
+            await self._search(updater, user_text) if decision.needs_search else None
         )
         prompt = _compose_prompt(user_text, results_text)
         await self._relay(updater, prompt)
@@ -78,14 +78,15 @@ class HostAgentExecutor(AgentExecutor):
                     f"Couldn't decide ({exc}): answering directly"
                 ),
             )
-            return Decision(needs_search=False, query="")
+            return Decision(needs_search=False)
 
-    async def _search(self, updater: TaskUpdater, decision: Decision) -> str | None:
+    async def _search(self, updater: TaskUpdater, user_text: str) -> str | None:
         """Query the search agent; return its joined text, or None on failure.
 
-        Emits a searching narration first. If the stream raises or its
-        final status is FAILED, the host degrades: a status note is
-        emitted and the results are dropped.
+        Emits a searching narration first. The search agent receives the
+        raw user message (decision models don't refine queries). If the
+        stream raises or its final status is FAILED, the host degrades:
+        a status note is emitted and the results are dropped.
         """
         await updater.update_status(
             state=TaskState.TASK_STATE_WORKING,
@@ -94,7 +95,7 @@ class HostAgentExecutor(AgentExecutor):
         chunks: list[str] = []
         final_status: Status | None = None
         try:
-            async for event in self._stream(self._search_url, decision.query):
+            async for event in self._stream(self._search_url, user_text):
                 if isinstance(event, Delta):
                     chunks.append(event.text)
                 else:
