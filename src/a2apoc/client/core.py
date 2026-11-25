@@ -7,6 +7,7 @@ frontends such as ``cli.py`` (and the upcoming Streamlit UI) consume
 
 from collections.abc import AsyncIterator, Awaitable, Callable
 from dataclasses import dataclass
+import os
 
 import httpx
 
@@ -16,7 +17,41 @@ from a2a.types import AgentCard, Role, SendMessageRequest, TaskState
 
 DEFAULT_BASE_URL = "http://127.0.0.1:9999"
 
+TIMEOUT_ENV_VAR = "A2A_POC_TIMEOUT"
+
+# httpx's defaults: 5s connect/write/pool; only the read timeout is raised.
+_CONNECT_TIMEOUT = 5.0
+_WRITE_TIMEOUT = 10.0
+_POOL_TIMEOUT = 5.0
+_DEFAULT_READ_TIMEOUT = 60.0
+
 ClientFactory = Callable[[AgentCard], Awaitable[Client]]
+
+
+def default_timeout() -> httpx.Timeout:
+    """Build the httpx timeout for clients this module creates.
+
+    The read timeout (default 60.0 seconds, overridable at call time via
+    the ``A2A_POC_TIMEOUT`` env var as float seconds) covers agent-side
+    time-to-first-byte: the chat agent's LLM time-to-first-token on SSE
+    streams and the search agent's non-streaming Tavily round trip both
+    regularly exceed httpx's 5-second default. A value that does not
+    parse as a float raises :class:`ValueError` naming the env var.
+    """
+    raw = os.environ.get(TIMEOUT_ENV_VAR)
+    if raw is None:
+        read = _DEFAULT_READ_TIMEOUT
+    else:
+        try:
+            read = float(raw)
+        except ValueError:
+            raise ValueError(
+                f"{TIMEOUT_ENV_VAR} must be a float, got {raw!r}"
+            ) from None
+    return httpx.Timeout(
+        connect=_CONNECT_TIMEOUT, read=read, write=_WRITE_TIMEOUT, pool=_POOL_TIMEOUT
+    )
+
 
 # Task states that end a task's lifecycle. Non-streaming agents answer
 # message/send with one final task in one of these states; streaming
@@ -71,7 +106,11 @@ async def stream_reply(
     resolved card (a seam for tests that script the event stream).
     """
     owns_client = httpx_client is None
-    http_client = httpx_client if httpx_client is not None else httpx.AsyncClient()
+    http_client = (
+        httpx_client
+        if httpx_client is not None
+        else httpx.AsyncClient(timeout=default_timeout())
+    )
     try:
         resolver = A2ACardResolver(httpx_client=http_client, base_url=base_url)
         agent_card = await resolver.get_agent_card()

@@ -17,7 +17,7 @@ from a2a.types import (
 )
 
 from a2apoc.chat.card import build_agent_card
-from a2apoc.client.core import Delta, Status, stream_reply
+from a2apoc.client.core import Delta, Status, default_timeout, stream_reply
 
 
 class ScriptedClient:
@@ -217,3 +217,32 @@ async def test_core_ignores_non_terminal_task_event_in_stream():
         Delta(text="Hel"),
         Status(state=TaskState.TASK_STATE_COMPLETED, message=None),
     ]
+
+
+def test_default_timeout_defaults(monkeypatch):
+    monkeypatch.delenv("A2A_POC_TIMEOUT", raising=False)
+
+    timeout = default_timeout()
+
+    assert timeout.read == 60.0
+    assert timeout.connect == 5.0
+    assert timeout.write == 10.0
+    assert timeout.pool == 5.0
+
+
+def test_default_timeout_env_override(monkeypatch):
+    monkeypatch.setenv("A2A_POC_TIMEOUT", "120")
+
+    timeout = default_timeout()
+
+    assert timeout.read == 120.0
+    assert timeout.connect == 5.0
+    assert timeout.write == 10.0
+    assert timeout.pool == 5.0
+
+
+def test_default_timeout_invalid_env(monkeypatch):
+    monkeypatch.setenv("A2A_POC_TIMEOUT", "abc")
+
+    with pytest.raises(ValueError, match="A2A_POC_TIMEOUT"):
+        default_timeout()
