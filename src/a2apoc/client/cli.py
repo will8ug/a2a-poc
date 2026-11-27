@@ -5,7 +5,6 @@ import asyncio
 import sys
 
 import httpx
-
 from a2a.client import A2AClientError
 from a2a.types import TaskState
 

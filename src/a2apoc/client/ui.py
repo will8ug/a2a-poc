@@ -13,7 +13,6 @@ from pathlib import Path
 
 import httpx
 import streamlit as st
-
 from a2a.client import A2AClientError
 from a2a.types import TaskState
 

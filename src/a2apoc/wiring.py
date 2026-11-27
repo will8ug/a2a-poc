@@ -20,6 +20,13 @@ HOST = "127.0.0.1"
 
 PORT_ENV_VAR = "A2A_POC_PORT"
 
+CHAT_PORT = 9999
+SEARCH_PORT = 9997
+HOST_PORT = 9998
+
+DEFAULT_CHAT_AGENT_URL = f"http://{HOST}:{CHAT_PORT}"
+DEFAULT_SEARCH_AGENT_URL = f"http://{HOST}:{SEARCH_PORT}"
+
 
 def resolve_bind(default_port: int) -> tuple[str, int]:
     """Resolve the server bind address from the ``A2A_POC_PORT`` env var.

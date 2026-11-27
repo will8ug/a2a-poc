@@ -5,7 +5,14 @@ from a2a.utils import AGENT_CARD_WELL_KNOWN_PATH, DEFAULT_RPC_URL
 from fastapi import FastAPI
 
 from a2apoc.chat.card import build_agent_card
-from a2apoc.wiring import HOST, ReplyArtifactStream, bind_a2a_routes, resolve_bind
+from a2apoc.wiring import (
+    DEFAULT_CHAT_AGENT_URL,
+    DEFAULT_SEARCH_AGENT_URL,
+    HOST,
+    ReplyArtifactStream,
+    bind_a2a_routes,
+    resolve_bind,
+)
 
 
 def test_resolve_bind_default(monkeypatch):
@@ -100,3 +107,8 @@ async def test_reply_stream_finish_and_flush_on_empty_stream_are_noops():
     await stream.flush_partial(updater)
 
     assert updater.calls == []
+
+
+def test_default_agent_urls_pin_topology():
+    assert DEFAULT_CHAT_AGENT_URL == "http://127.0.0.1:9999"
+    assert DEFAULT_SEARCH_AGENT_URL == "http://127.0.0.1:9997"

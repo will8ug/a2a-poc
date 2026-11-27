@@ -5,7 +5,7 @@ subprocess and supervises them:
 
 * every output line is printed with a ``[name]`` prefix;
 * the host child gets ``CHAT_AGENT_URL``/``SEARCH_AGENT_URL`` (the spec
-  defaults, imported from the host module) injected into its environment
+  defaults, imported from wiring) injected into its environment
   explicitly, while ambient ``A2A_POC_PORT`` is stripped from every child
   (the launcher always uses the default ports; an exported port override
   would otherwise make all three children bind one port);
@@ -24,38 +24,45 @@ import os
 import signal
 import sys
 
-from a2apoc.host.app import (
-    CHAT_AGENT_URL_ENV,
+from a2apoc.host.app import CHAT_AGENT_URL_ENV, SEARCH_AGENT_URL_ENV
+from a2apoc.wiring import (
     DEFAULT_CHAT_AGENT_URL,
     DEFAULT_SEARCH_AGENT_URL,
-    SEARCH_AGENT_URL_ENV,
+    PORT_ENV_VAR,
 )
 
-# (log prefix, module) for each child, in spawn order.
-CHILDREN: tuple[tuple[str, str], ...] = (
-    ("search", "a2apoc.search.app"),
-    ("chat", "a2apoc.chat.app"),
-    ("host", "a2apoc.host.app"),
+# (log prefix, module, extra env) for each child, in spawn order.
+CHILDREN: tuple[tuple[str, str, dict[str, str]], ...] = (
+    ("search", "a2apoc.search.app", {}),
+    ("chat", "a2apoc.chat.app", {}),
+    (
+        "host",
+        "a2apoc.host.app",
+        {
+            CHAT_AGENT_URL_ENV: DEFAULT_CHAT_AGENT_URL,
+            SEARCH_AGENT_URL_ENV: DEFAULT_SEARCH_AGENT_URL,
+        },
+    ),
 )
 
 # Seconds to wait after terminate() before escalating to kill().
 TERMINATE_TIMEOUT = 10.0
 
 
-async def _spawn(name: str, module: str) -> asyncio.subprocess.Process:
+async def _spawn(
+    name: str, module: str, extra_env: dict[str, str]
+) -> asyncio.subprocess.Process:
     """Start ``python -m module`` with merged, piped output.
 
     Ambient ``A2A_POC_PORT`` is stripped from the child env so the
     launcher's fixed default ports always win: the three children must
-    never race for one port. The host child additionally gets the agent
-    URLs injected explicitly, so the demo does not depend on ambient
-    environment settings either.
+    never race for one port. Each child's ``extra_env`` is applied
+    explicitly on top of that environment, so the host child's agent
+    URLs do not depend on ambient environment settings either.
     """
     env = os.environ.copy()
-    env.pop("A2A_POC_PORT", None)
-    if name == "host":
-        env[CHAT_AGENT_URL_ENV] = DEFAULT_CHAT_AGENT_URL
-        env[SEARCH_AGENT_URL_ENV] = DEFAULT_SEARCH_AGENT_URL
+    env.pop(PORT_ENV_VAR, None)
+    env.update(extra_env)
     print(f"[demo] starting {name}: {sys.executable} -m {module}", flush=True)
     return await asyncio.create_subprocess_exec(
         sys.executable,
@@ -69,7 +76,9 @@ async def _spawn(name: str, module: str) -> asyncio.subprocess.Process:
 
 async def _stream(name: str, proc: asyncio.subprocess.Process) -> int:
     """Echo the child's merged output line by line; return its exit code."""
-    assert proc.stdout is not None  # always set by _spawn
+    if proc.stdout is None:
+        # _spawn always pipes stdout; anything else is a launcher bug.
+        raise RuntimeError(f"child {name} was spawned without piped stdout")
     while True:
         raw = await proc.stdout.readline()
         if not raw:
@@ -107,8 +116,8 @@ async def _supervise() -> int:
     procs: dict[str, asyncio.subprocess.Process] = {}
     streams: dict[str, asyncio.Task[int]] = {}
     try:
-        for name, module in CHILDREN:
-            procs[name] = await _spawn(name, module)
+        for name, module, extra_env in CHILDREN:
+            procs[name] = await _spawn(name, module, extra_env)
         print("[demo] all children started; Ctrl-C to stop", flush=True)
         for name, proc in procs.items():
             streams[name] = asyncio.create_task(

@@ -64,10 +64,9 @@ class ChatAgent:
     ``openai.AsyncOpenAI``).
     """
 
-    def __init__(self, client, model: str, system_prompt: str = SYSTEM_PROMPT):
+    def __init__(self, client, model: str):
         self._client = client
         self._model = model
-        self._system_prompt = system_prompt
 
     async def stream_reply(self, user_text: str) -> AsyncIterator[str]:
         """Yield non-empty text deltas from a streaming chat completion."""
@@ -75,7 +74,7 @@ class ChatAgent:
             model=self._model,
             stream=True,
             messages=[
-                {"role": "system", "content": self._system_prompt},
+                {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": user_text},
             ],
         )
@@ -89,14 +88,9 @@ class ChatAgent:
                 yield content
 
 
-def build_chat_agent(config: Config, system_prompt: str = SYSTEM_PROMPT) -> ChatAgent:
-    """Build a ChatAgent with a real AsyncOpenAI client from Config.
-
-    ``system_prompt`` overrides the default persona (e.g. the host's
-    decider prompt); it defaults to :data:`SYSTEM_PROMPT`.
-    """
+def build_chat_agent(config: Config) -> ChatAgent:
+    """Build a ChatAgent with a real AsyncOpenAI client from Config."""
     return ChatAgent(
         client=AsyncOpenAI(base_url=config.base_url, api_key=config.api_key),
         model=config.model,
-        system_prompt=system_prompt,
     )

@@ -36,7 +36,9 @@ async def test_executor_streams_cjk_text(queue, _context, _final_state, _artifac
 async def test_llm_failure_marks_task_failed(
     queue, _context, _final_state, _artifact_text
 ):
-    executor = ChatAgentExecutor(agent=FakeAgent(error=RuntimeError("boom: 401 Unauthorized")))
+    executor = ChatAgentExecutor(
+        agent=FakeAgent(error=RuntimeError("boom: 401 Unauthorized"))
+    )
     await executor.execute(_context("hi"), queue)
     assert _final_state(queue.events) == TaskState.TASK_STATE_FAILED
     assert _artifact_text(queue.events) == ""

@@ -19,7 +19,7 @@ _ENDPOINT = "https://opencode.ai/inference/systemone/v1/systemone"
 
 # Shared default client timeout (httpx's own DEFAULT_TIMEOUT_CONFIG
 # pattern: a module-level singleton value object).
-_DEFAULT_TIMEOUT = httpx.Timeout(30.0)
+DEFAULT_TIMEOUT = httpx.Timeout(30.0)
 
 # The single question asked about each message; its key also names the
 # answer in the response envelope.
@@ -60,7 +60,7 @@ class OpenCodeDecider:
         self,
         client=None,
         model: str = DEFAULT_MODEL,
-        timeout: httpx.Timeout = _DEFAULT_TIMEOUT,
+        timeout: httpx.Timeout = DEFAULT_TIMEOUT,
     ):
         if client is not None:
             self._client = client

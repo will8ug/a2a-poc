@@ -2,7 +2,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from a2apoc.llm import ChatAgent, Config, ConfigError, SYSTEM_PROMPT, load_config
+from a2apoc.llm import SYSTEM_PROMPT, ChatAgent, Config, ConfigError, load_config
 
 
 def test_load_config_reads_all_env_vars(monkeypatch):
@@ -25,7 +25,9 @@ def test_load_config_missing_vars_fail_fast(monkeypatch):
 
 
 def _chunk(text: str):
-    return SimpleNamespace(choices=[SimpleNamespace(delta=SimpleNamespace(content=text))])
+    return SimpleNamespace(
+        choices=[SimpleNamespace(delta=SimpleNamespace(content=text))]
+    )
 
 
 def _empty_choices_chunk():
@@ -53,7 +55,9 @@ class FakeOpenAIClient:
 
 
 async def test_stream_reply_yields_deltas_in_order():
-    agent = ChatAgent(client=FakeOpenAIClient([_chunk("Hel"), _chunk("lo")]), model="test-model")
+    agent = ChatAgent(
+        client=FakeOpenAIClient([_chunk("Hel"), _chunk("lo")]), model="test-model"
+    )
     deltas = [d async for d in agent.stream_reply("hi")]
     assert deltas == ["Hel", "lo"]
 

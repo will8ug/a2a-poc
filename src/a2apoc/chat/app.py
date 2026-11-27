@@ -8,9 +8,9 @@ from fastapi import FastAPI
 from a2apoc.chat.card import build_agent_card
 from a2apoc.chat.executor import ChatAgentExecutor
 from a2apoc.llm import Config, build_chat_agent, load_config
-from a2apoc.wiring import HOST, bind_a2a_routes, resolve_bind
+from a2apoc.wiring import CHAT_PORT, HOST, bind_a2a_routes, resolve_bind
 
-PORT = 9999
+PORT = CHAT_PORT
 
 
 def create_app(config: Config | None = None, port: int = PORT) -> FastAPI:

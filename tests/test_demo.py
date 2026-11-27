@@ -15,6 +15,7 @@ from typing import Any
 import pytest
 
 from a2apoc import demo
+from a2apoc.wiring import DEFAULT_CHAT_AGENT_URL, DEFAULT_SEARCH_AGENT_URL
 
 
 class _FakeStdout:
@@ -82,3 +83,44 @@ def test_spawn_failure_terminates_already_spawned_children(monkeypatch):
     # ambient A2A_POC_PORT.
     assert spawned_envs[0] is not None
     assert "A2A_POC_PORT" not in spawned_envs[0]
+
+
+async def test_host_child_env_carries_default_agent_urls(monkeypatch):
+    envs = []
+
+    async def fake_exec(*args: Any, **kwargs: Any) -> _FakeProcess:
+        envs.append(kwargs.get("env"))
+        return _FakeProcess()
+
+    monkeypatch.setattr(asyncio, "create_subprocess_exec", fake_exec)
+    monkeypatch.delenv("CHAT_AGENT_URL", raising=False)
+    monkeypatch.delenv("SEARCH_AGENT_URL", raising=False)
+    monkeypatch.setenv("A2A_POC_PORT", "7777")
+
+    for name, module, extra_env in demo.CHILDREN:
+        await demo._spawn(name, module, extra_env)
+
+    assert envs[2]["CHAT_AGENT_URL"] == DEFAULT_CHAT_AGENT_URL
+    assert envs[2]["SEARCH_AGENT_URL"] == DEFAULT_SEARCH_AGENT_URL
+    for env in envs[:2]:
+        assert "CHAT_AGENT_URL" not in env
+        assert "SEARCH_AGENT_URL" not in env
+    assert all("A2A_POC_PORT" not in env for env in envs)
+
+
+async def test_host_agent_url_injection_overrides_ambient(monkeypatch):
+    envs = []
+
+    async def fake_exec(*args: Any, **kwargs: Any) -> _FakeProcess:
+        envs.append(kwargs.get("env"))
+        return _FakeProcess()
+
+    monkeypatch.setattr(asyncio, "create_subprocess_exec", fake_exec)
+    monkeypatch.setenv("CHAT_AGENT_URL", "http://ambient:1")
+    monkeypatch.setenv("SEARCH_AGENT_URL", "http://ambient:2")
+
+    for name, module, extra_env in demo.CHILDREN:
+        await demo._spawn(name, module, extra_env)
+
+    assert envs[2]["CHAT_AGENT_URL"] == DEFAULT_CHAT_AGENT_URL
+    assert envs[2]["SEARCH_AGENT_URL"] == DEFAULT_SEARCH_AGENT_URL

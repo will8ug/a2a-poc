@@ -9,9 +9,9 @@ from a2apoc.search.card import build_search_agent_card
 from a2apoc.search.config import load_tavily_config
 from a2apoc.search.executor import SearchAgentExecutor
 from a2apoc.search.tavily_client import TavilySearcher, build_tavily_searcher
-from a2apoc.wiring import HOST, bind_a2a_routes, resolve_bind
+from a2apoc.wiring import HOST, SEARCH_PORT, bind_a2a_routes, resolve_bind
 
-PORT = 9997
+PORT = SEARCH_PORT
 
 
 def create_search_app(

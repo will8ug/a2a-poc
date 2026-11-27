@@ -19,7 +19,9 @@ def build_search_agent_card(base_url: str) -> AgentCard:
     )
     return AgentCard(
         name="A2A PoC Search Agent",
-        description="One Tavily-backed web search agent exposed over A2A (proof of concept).",
+        description=(
+            "One Tavily-backed web search agent exposed over A2A (proof of concept)."
+        ),
         version="0.1.0",
         default_input_modes=["text/plain"],
         default_output_modes=["text/plain"],

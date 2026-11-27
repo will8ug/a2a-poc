@@ -11,19 +11,33 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 
 from a2apoc.host.card import build_host_agent_card
-from a2apoc.host.decision import DEFAULT_MODEL, Decision, OpenCodeDecider
+from a2apoc.host.decision import (
+    DEFAULT_MODEL,
+    DEFAULT_TIMEOUT,
+    Decision,
+    OpenCodeDecider,
+)
 from a2apoc.host.executor import HostAgentExecutor
-from a2apoc.wiring import HOST, bind_a2a_routes, resolve_bind
+from a2apoc.wiring import (
+    DEFAULT_CHAT_AGENT_URL,
+    DEFAULT_SEARCH_AGENT_URL,
+    HOST,
+    HOST_PORT,
+    bind_a2a_routes,
+    resolve_bind,
+)
 
-PORT = 9998
+PORT = HOST_PORT
 
 CHAT_AGENT_URL_ENV = "CHAT_AGENT_URL"
 SEARCH_AGENT_URL_ENV = "SEARCH_AGENT_URL"
 OPENCODE_API_KEY_ENV = "OPENCODE_API_KEY"
 DECISION_MODEL_ENV = "A2A_POC_DECISION_MODEL"
 
-DEFAULT_CHAT_AGENT_URL = "http://127.0.0.1:9999"
-DEFAULT_SEARCH_AGENT_URL = "http://127.0.0.1:9997"
+
+class HostConfigError(RuntimeError):
+    """Raised when the host's required environment variables are missing."""
+
 
 Decider = Callable[[str], Awaitable[Decision]]
 
@@ -54,7 +68,7 @@ def main() -> None:
     load_dotenv(".env")
     api_key = os.environ.get(OPENCODE_API_KEY_ENV)
     if not api_key:
-        raise RuntimeError(
+        raise HostConfigError(
             f"Missing required environment variable: {OPENCODE_API_KEY_ENV}. "
             "Copy .env.example to .env and fill in values."
         )
@@ -62,7 +76,7 @@ def main() -> None:
     # The decider never sees the key: it rides the client's default
     # headers, as the Tavily key rides the Tavily client.
     client = httpx.AsyncClient(
-        timeout=httpx.Timeout(30.0),
+        timeout=DEFAULT_TIMEOUT,
         headers={"Authorization": f"Bearer {api_key}"},
     )
     decider = OpenCodeDecider(client=client, model=model)

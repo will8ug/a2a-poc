@@ -1,6 +1,5 @@
 import httpx
 import pytest
-
 from a2a.helpers import new_text_message
 from a2a.types import (
     Artifact,

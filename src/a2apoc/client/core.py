@@ -5,17 +5,18 @@ frontends such as ``cli.py`` (and the upcoming Streamlit UI) consume
 ``stream_reply`` and own all presentation and error translation.
 """
 
+import os
 from collections.abc import AsyncIterator, Awaitable, Callable
 from dataclasses import dataclass
-import os
 
 import httpx
-
 from a2a.client import A2ACardResolver, Client, ClientConfig, create_client
 from a2a.helpers import new_text_message
 from a2a.types import AgentCard, Role, SendMessageRequest, TaskState
 
-DEFAULT_BASE_URL = "http://127.0.0.1:9998"
+from a2apoc.wiring import HOST, HOST_PORT
+
+DEFAULT_BASE_URL = f"http://{HOST}:{HOST_PORT}"
 
 TIMEOUT_ENV_VAR = "A2A_POC_TIMEOUT"
 
