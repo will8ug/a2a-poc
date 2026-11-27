@@ -6,56 +6,10 @@ pipeline.
 
 ## Configure
 
-Copy `.env.example` to `.env` and fill in the keys:
-
-- `LLM_API_KEY` / `LLM_BASE_URL` / `LLM_MODEL` — the chat agent's LLM.
-- `TAVILY_API_KEY` — the search agent's web-search API.
-- `OPENCODE_API_KEY` — the host's decision model (routes each message
-  to search or direct answer; the host makes no LLM calls of its own).
+Copy `.env.example` to `.env` and fill in the keys.
 
 `A2A_POC_DECISION_MODEL` optionally overrides the host's decision model
 (default `gemini-decision-1`).
-
-## Run the chat agent
-
-```sh
-uv run a2a-poc-chat
-```
-
-The chat agent binds `127.0.0.1:9999` and serves its agent card at
-<http://127.0.0.1:9999/.well-known/agent-card.json>.
-
-## Run the client
-
-In another terminal:
-
-```sh
-uv run a2a-poc-client "Say hello."
-```
-
-The client talks to any A2A agent. By default it targets the chat agent
-(`http://127.0.0.1:9999`). To drive the full multi-agent pipeline, point it
-at the host instead:
-
-```sh
-uv run a2a-poc-client --base-url http://127.0.0.1:9998 "What's new with the A2A protocol?"
-```
-
-See the Multi-agent demo section below for what the host does.
-
-## Run the UI
-
-In another terminal, start the UI and open the URL it prints (default:
-<http://localhost:8501>):
-
-```sh
-uv run a2a-poc-ui
-```
-
-The chat keeps its history in the browser session. **Agent base URL** in the
-sidebar accepts any A2A agent: the chat agent directly (the default,
-`http://127.0.0.1:9999`), or the host (`http://127.0.0.1:9998`) to drive the
-full pipeline. See the Multi-agent demo section below.
 
 ## Multi-agent demo
 
@@ -90,14 +44,29 @@ uv run a2a-poc-chat           # chat agent, port 9999
 uv run a2a-poc-host           # host, port 9998
 ```
 
-### Try it
+### Try with UI
 
-Start the UI (`uv run a2a-poc-ui`), set **Agent base URL** in the sidebar
+In another terminal, start the UI and open the URL it prints (default:
+<http://localhost:8501>):
+
+```sh
+uv run a2a-poc-ui
+```
+
+Set **Agent base URL** in the sidebar
 to the host (`http://127.0.0.1:9998`), and ask something that needs the
-web. Info lines appear in the chat as the host works ("Searching the
-web…"), then the answer streams in. If search is unavailable, a note says
-so and the answer still arrives; a failed synthesis shows a red error box
-with the reason the task failed.
+web.
+
+### Try with CLI
+
+In another terminal:
+
+```sh
+uv run a2a-poc-client "What's new with the A2A protocol?"
+
+# talk to another agent - chat agent
+uv run a2a-poc-client --base-url http://127.0.0.1:9999 "Say hello."
+```
 
 ### Custom ports
 
@@ -107,6 +76,11 @@ reaches its downstream agents at fixed default URLs
 another port therefore also requires setting the host's `CHAT_AGENT_URL`
 or `SEARCH_AGENT_URL` accordingly. The demo launcher always uses the
 default ports.
+
+## Further notes
+
+The default agent card of chat agent:
+<http://127.0.0.1:9999/.well-known/agent-card.json>.
 
 ## Verify without an LLM key
 
