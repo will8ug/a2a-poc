@@ -1,21 +1,6 @@
 from a2apoc.search.tavily_client import TavilySearcher
 
 
-class FakeTavilyClient:
-    """Duck-typed stand-in for ``tavily.AsyncTavilyClient``."""
-
-    def __init__(self, response=None, error=None):
-        self._response = response
-        self._error = error
-        self.calls = []
-
-    async def search(self, query, **kwargs):
-        self.calls.append((query, kwargs))
-        if self._error:
-            raise self._error
-        return self._response
-
-
 def _response(results):
     return {
         "query": "q",
@@ -31,8 +16,8 @@ def _response(results):
     }
 
 
-async def test_search_formats_title_url_and_snippet():
-    client = FakeTavilyClient(
+async def test_search_formats_title_url_and_snippet(fake_tavily_client):
+    client = fake_tavily_client(
         response=_response(
             [
                 {
@@ -58,8 +43,8 @@ async def test_search_formats_title_url_and_snippet():
     assert "Search API documentation." in output
 
 
-async def test_search_passes_max_results_five():
-    client = FakeTavilyClient(response=_response([]))
+async def test_search_passes_max_results_five(fake_tavily_client):
+    client = fake_tavily_client(response=_response([]))
     searcher = TavilySearcher(client)
     await searcher.search("anything")
     query, kwargs = client.calls[0]
@@ -67,7 +52,7 @@ async def test_search_passes_max_results_five():
     assert kwargs["max_results"] == 5
 
 
-async def test_search_empty_results_returns_placeholder():
-    client = FakeTavilyClient(response=_response([]))
+async def test_search_empty_results_returns_placeholder(fake_tavily_client):
+    client = fake_tavily_client(response=_response([]))
     searcher = TavilySearcher(client)
     assert await searcher.search("obscure") == "No results found."

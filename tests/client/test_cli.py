@@ -1,8 +1,6 @@
 import httpx
 import pytest
 
-from google.protobuf.json_format import MessageToJson
-
 from a2a.helpers import new_text_message
 from a2a.types import (
     Artifact,
@@ -14,7 +12,6 @@ from a2a.types import (
     TaskStatusUpdateEvent,
 )
 
-from a2apoc.chat.card import build_agent_card
 from a2apoc.client.cli import main, run
 
 
@@ -40,33 +37,9 @@ async def test_client_malformed_base_url_friendly_error(capsys):
     assert "cannot reach" in capsys.readouterr().err
 
 
-class ScriptedClient:
-    """Stand-in for ``a2a.client.Client`` that replays a scripted event stream."""
-
-    def __init__(self, events):
-        self._events = events
-
-    async def send_message(self, request):
-        for event in self._events:
-            yield event
-
-    async def close(self):
-        pass
-
-
-def _card_transport():
-    """Transport whose only answer is a well-formed agent card."""
-    card_json = MessageToJson(build_agent_card("http://127.0.0.1:9999"))
-
-    def _serve_card(request):
-        return httpx.Response(
-            200, content=card_json, headers={"content-type": "application/json"}
-        )
-
-    return httpx.MockTransport(_serve_card)
-
-
-async def test_client_failed_task_prints_reason_and_exits_nonzero(capsys):
+async def test_client_failed_task_prints_reason_and_exits_nonzero(
+    scripted_client, _card_transport, capsys
+):
     events = [
         StreamResponse(
             status_update=TaskStatusUpdateEvent(
@@ -95,7 +68,7 @@ async def test_client_failed_task_prints_reason_and_exits_nonzero(capsys):
     ]
 
     async def factory(card):
-        return ScriptedClient(events)
+        return scripted_client(events)
 
     with pytest.raises(SystemExit) as excinfo:
         await run(

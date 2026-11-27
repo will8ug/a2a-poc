@@ -34,7 +34,7 @@ class FakeResponse:
         return self._body
 
 
-class FakeClient:
+class FakePostClient:
     """Duck-typed httpx.AsyncClient: captures posts, replays a response."""
 
     def __init__(self, response: FakeResponse):
@@ -47,7 +47,7 @@ class FakeClient:
 
 
 def _decider(response: FakeResponse, model: str = "gemini-decision-1"):
-    client = FakeClient(response)
+    client = FakePostClient(response)
     return OpenCodeDecider(client=client, model=model), client
 
 

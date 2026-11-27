@@ -4,17 +4,14 @@ from a2apoc.search.app import create_search_app
 from a2apoc.search.tavily_client import TavilySearcher
 
 
-class FakeTavilyClient:
-    async def search(self, query, **kwargs):
-        return {"results": []}
+def _app(fake_tavily_client):
+    return create_search_app(
+        searcher=TavilySearcher(fake_tavily_client(response={"results": []}))
+    )
 
 
-def _app():
-    return create_search_app(searcher=TavilySearcher(FakeTavilyClient()))
-
-
-def test_agent_card_route_serves_card():
-    client = TestClient(_app())
+def test_agent_card_route_serves_card(fake_tavily_client):
+    client = TestClient(_app(fake_tavily_client))
     response = client.get("/.well-known/agent-card.json")
     assert response.status_code == 200
     body = response.json()
@@ -25,7 +22,12 @@ def test_agent_card_route_serves_card():
     assert "search" in skill["tags"]
 
 
-def test_create_search_app_port_flows_into_card():
-    client = TestClient(create_search_app(searcher=TavilySearcher(FakeTavilyClient()), port=1234))
+def test_create_search_app_port_flows_into_card(fake_tavily_client):
+    client = TestClient(
+        create_search_app(
+            searcher=TavilySearcher(fake_tavily_client(response={"results": []})),
+            port=1234,
+        )
+    )
     body = client.get("/.well-known/agent-card.json").json()
     assert body["supportedInterfaces"][0]["url"].endswith(":1234")

@@ -1,8 +1,6 @@
 import httpx
 import pytest
 
-from google.protobuf.json_format import MessageToJson
-
 from a2a.client import A2AClientError
 from a2a.helpers import new_text_message
 from a2a.types import (
@@ -16,34 +14,7 @@ from a2a.types import (
     TaskStatusUpdateEvent,
 )
 
-from a2apoc.chat.card import build_agent_card
 from a2apoc.client.core import Delta, Status, default_timeout, stream_reply
-
-
-class ScriptedClient:
-    """Stand-in for ``a2a.client.Client`` that replays a scripted event stream."""
-
-    def __init__(self, events):
-        self._events = events
-
-    async def send_message(self, request):
-        for event in self._events:
-            yield event
-
-    async def close(self):
-        pass
-
-
-def _card_transport():
-    """Transport whose only answer is a well-formed agent card."""
-    card_json = MessageToJson(build_agent_card("http://127.0.0.1:9999"))
-
-    def _serve_card(request):
-        return httpx.Response(
-            200, content=card_json, headers={"content-type": "application/json"}
-        )
-
-    return httpx.MockTransport(_serve_card)
 
 
 def _status_update(state, message=None):
@@ -69,7 +40,7 @@ def _artifact_update(text):
     )
 
 
-async def test_core_yields_deltas_and_status_in_order():
+async def test_core_yields_deltas_and_status_in_order(scripted_client, _card_transport):
     events = [
         _status_update(TaskState.TASK_STATE_WORKING),
         _artifact_update("Hel"),
@@ -78,7 +49,7 @@ async def test_core_yields_deltas_and_status_in_order():
     ]
 
     async def factory(card):
-        return ScriptedClient(events)
+        return scripted_client(events)
 
     received = []
     async for event in stream_reply(
@@ -97,7 +68,9 @@ async def test_core_yields_deltas_and_status_in_order():
     ]
 
 
-async def test_core_failed_task_ends_without_systemexit_and_prints_nothing(capsys):
+async def test_core_failed_task_ends_without_systemexit_and_prints_nothing(
+    scripted_client, _card_transport, capsys
+):
     events = [
         _status_update(TaskState.TASK_STATE_WORKING),
         _status_update(
@@ -107,7 +80,7 @@ async def test_core_failed_task_ends_without_systemexit_and_prints_nothing(capsy
     ]
 
     async def factory(card):
-        return ScriptedClient(events)
+        return scripted_client(events)
 
     received = []
     async for event in stream_reply(
@@ -160,22 +133,28 @@ def _task_response(state, artifact_texts=(), message=None):
     return StreamResponse(task=task)
 
 
-async def _collect(events):
-    async def factory(card):
-        return ScriptedClient(events)
+@pytest.fixture
+def _collect(scripted_client, _card_transport):
+    """Collect stream_reply events with a scripted client and card transport."""
 
-    received = []
-    async for event in stream_reply(
-        "http://127.0.0.1:9999",
-        "hi",
-        httpx_client=httpx.AsyncClient(transport=_card_transport()),
-        client_factory=factory,
-    ):
-        received.append(event)
-    return received
+    async def collect(events):
+        async def factory(card):
+            return scripted_client(events)
+
+        received = []
+        async for event in stream_reply(
+            "http://127.0.0.1:9999",
+            "hi",
+            httpx_client=httpx.AsyncClient(transport=_card_transport()),
+            client_factory=factory,
+        ):
+            received.append(event)
+        return received
+
+    return collect
 
 
-async def test_core_translates_final_task_from_non_streaming_agent():
+async def test_core_translates_final_task_from_non_streaming_agent(_collect):
     events = [
         _task_response(
             TaskState.TASK_STATE_COMPLETED,
@@ -189,7 +168,7 @@ async def test_core_translates_final_task_from_non_streaming_agent():
     ]
 
 
-async def test_core_translates_failed_task_with_reason():
+async def test_core_translates_failed_task_with_reason(_collect):
     events = [
         _task_response(
             TaskState.TASK_STATE_FAILED,
@@ -202,7 +181,7 @@ async def test_core_translates_failed_task_with_reason():
     ]
 
 
-async def test_core_ignores_non_terminal_task_event_in_stream():
+async def test_core_ignores_non_terminal_task_event_in_stream(_collect):
     # A streaming response's first event is the initial task (SUBMITTED);
     # it must not surface as an extra leading Status.
     events = [

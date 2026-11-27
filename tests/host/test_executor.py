@@ -1,9 +1,6 @@
 """Tests for the host's decide → search → synthesize orchestration."""
 
-from types import SimpleNamespace
-
-from a2a.helpers import new_text_message
-from a2a.types import Role, TaskState
+from a2a.types import TaskState
 
 from a2apoc.client.core import Delta, Status
 from a2apoc.host.decision import Decision
@@ -55,20 +52,6 @@ class FakeStream:
             yield event
 
 
-class FakeEventQueue:
-    def __init__(self):
-        self.events = []
-
-    async def enqueue_event(self, event):
-        self.events.append(event)
-
-
-def _context(text: str):
-    return SimpleNamespace(
-        message=new_text_message(text, role=Role.ROLE_USER), current_task=None
-    )
-
-
 def _completed():
     return Status(state=TaskState.TASK_STATE_COMPLETED, message=None)
 
@@ -81,21 +64,8 @@ def _working():
     return Status(state=TaskState.TASK_STATE_WORKING, message=None)
 
 
-def _artifact_text(events):
-    parts = []
-    for e in events:
-        artifact = getattr(e, "artifact", None)
-        if artifact is not None:
-            parts.extend(p.text for p in artifact.parts)
-    return "".join(parts)
-
-
 def _status_states(events):
     return [e.status.state for e in events if hasattr(e, "status")]
-
-
-def _final_state(events):
-    return _status_states(events)[-1]
 
 
 def _status_texts(events):
@@ -115,8 +85,9 @@ def _no_search():
 # Scenario 1: no search needed — relay the chat agent's streamed reply.
 
 
-async def test_no_search_relays_chat_reply_as_artifacts():
-    queue = FakeEventQueue()
+async def test_no_search_relays_chat_reply_as_artifacts(
+    queue, _context, _final_state, _artifact_text
+):
     stream = FakeStream().script(
         CHAT_URL, [_working(), Delta("Hel"), Delta("lo"), _completed()]
     )
@@ -139,8 +110,9 @@ async def test_no_search_relays_chat_reply_as_artifacts():
 # Scenario 2: search needed — synthesize from question + results.
 
 
-async def test_search_path_composes_question_and_results():
-    queue = FakeEventQueue()
+async def test_search_path_composes_question_and_results(
+    queue, _context, _final_state, _artifact_text
+):
     stream = FakeStream()
     stream.script(
         SEARCH_URL,
@@ -174,8 +146,9 @@ async def test_search_path_composes_question_and_results():
 # Scenario 3: the search stream raises — degrade to a direct answer.
 
 
-async def test_search_error_degrades_to_direct_answer():
-    queue = FakeEventQueue()
+async def test_search_error_degrades_to_direct_answer(
+    queue, _context, _final_state, _artifact_text
+):
     stream = FakeStream()
     stream.script(SEARCH_URL, [RuntimeError("connection refused")])
     stream.script(CHAT_URL, [_working(), Delta("direct answer"), _completed()])
@@ -199,8 +172,9 @@ async def test_search_error_degrades_to_direct_answer():
 # Scenario 4: the search task FAILED — degrade to a direct answer.
 
 
-async def test_search_failed_status_degrades_to_direct_answer():
-    queue = FakeEventQueue()
+async def test_search_failed_status_degrades_to_direct_answer(
+    queue, _context, _final_state, _artifact_text
+):
     stream = FakeStream()
     stream.script(SEARCH_URL, [Delta("partial results"), _failed("Tavily API error")])
     stream.script(CHAT_URL, [_working(), Delta("direct answer"), _completed()])
@@ -227,8 +201,9 @@ async def test_search_failed_status_degrades_to_direct_answer():
 # Scenario 5: the decider raises — fall back to the no-search path.
 
 
-async def test_decider_error_falls_back_to_direct_answer():
-    queue = FakeEventQueue()
+async def test_decider_error_falls_back_to_direct_answer(
+    queue, _context, _final_state, _artifact_text
+):
     stream = FakeStream().script(
         CHAT_URL, [_working(), Delta("direct answer"), _completed()]
     )
@@ -251,8 +226,9 @@ async def test_decider_error_falls_back_to_direct_answer():
 # Scenario 6: the chat task FAILED — the host task fails with the wire reason.
 
 
-async def test_chat_failed_fails_host_task_with_wire_reason():
-    queue = FakeEventQueue()
+async def test_chat_failed_fails_host_task_with_wire_reason(
+    queue, _context, _final_state
+):
     stream = FakeStream().script(
         CHAT_URL,
         [_working(), Delta("par"), Delta("tial"), _failed("LLM call failed: boom")],
