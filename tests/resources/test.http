@@ -1,0 +1,6 @@
+@baseUrl=http://127.0.0.1:9999
+
+### GET Agent Card
+GET {{baseUrl}}/.well-known/agent-card.json
+
+###
