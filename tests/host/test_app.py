@@ -1,4 +1,4 @@
-"""Tests for the host FastAPI app's agent card route."""
+"""Tests for the host FastAPI app: agent card route and config guard."""
 
 import pytest
 from fastapi.testclient import TestClient

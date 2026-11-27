@@ -14,9 +14,10 @@ subprocess and supervises them:
 * a child that exits on its own terminates its siblings, is reported by
   name, and makes the launcher exit non-zero.
 
-There is deliberately no committed test for this module: the pinned
-end-to-end check (start all three, curl the agent cards, SIGINT the
-launcher, then confirm every listener and process is gone) is the test.
+Offline supervision invariants are pinned in ``tests/test_demo.py``;
+the end-to-end check (start all three, curl the agent cards, SIGINT the
+launcher, then confirm every listener and process is gone) remains the
+authoritative integration test.
 """
 
 import asyncio
