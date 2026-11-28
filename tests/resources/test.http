@@ -1,6 +1,14 @@
-@baseUrl=http://127.0.0.1:9999
+@searchBaseUrl=http://127.0.0.1:9997
+@hostBaseUrl=http://127.0.0.1:9998
+@chatBaseUrl=http://127.0.0.1:9999
 
-### GET Agent Card
-GET {{baseUrl}}/.well-known/agent-card.json
+### GET Agent Card - Chat Agent
+GET {{chatBaseUrl}}/.well-known/agent-card.json
+
+### GET Agent Card - Host Agent
+GET {{hostBaseUrl}}/.well-known/agent-card.json
+
+### GET Agent Card - Search Agent
+GET {{searchBaseUrl}}/.well-known/agent-card.json
 
 ###
